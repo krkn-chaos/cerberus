@@ -57,43 +57,28 @@ def monitor_nodes():
        status = True
     return status
 
-# Monitor the status of the etcd and set the status to true or false
-def monitor_etcd(etcd_namespace):
-    etcd_pods = list_pods(etcd_namespace)
-    etcd_ready_pods = []
-    etcd_notready_pods = []
-    for pod in etcd_pods:
+# Monitor the status of the pods in the specified namespace and set the status to true or false
+def monitor_namespace(namespace):
+    pods = list_pods(namespace)
+    ready_pods = []
+    completed_pods = []
+    notready_pods = []
+    for pod in pods:
         try:
-            etcd_pod_info = cli.read_namespaced_pod_status(pod, etcd_namespace, pretty=True)
+            pod_info = cli.read_namespaced_pod_status(pod, namespace, pretty=True)
         except ApiException as e:
             print("Exception when calling CoreV1Api->read_namespaced_pod_status: %s\n" % e)
-        etcd_pod_status = etcd_pod_info.status.phase
-        if etcd_pod_status == "Running":
-           etcd_ready_pods.append(pod)
+        pod_status = pod_info.status.phase
+        if pod_status == "Running":
+            ready_pods.append(pod)
+        elif pod_status == "Completed":
+            completed_pods.append(pod)
         else:
-           etcd_notready_pods.append(pod)
-    if len(etcd_notready_pods) != 0:
+           notready_pods.append(pod)
+    if len(notready_pods) != 0:
        status = False
     else:
        status = True
-    return status
-
-# Monitor the status of the openshift-apiserer and set the status to true or false
-def monitor_openshift_apiserver(openshift_apiserver_namespace):
-    openshift_apiserver_pods = list_pods(openshift_apiserver_namespace)
-    apiserver_ready_pods = []
-    apiserver_notready_pods = []
-    for pod in openshift_apiserver_pods:
-        apiserver_pod_info = cli.read_namespaced_pod_status(pod, openshift_apiserver_namespace, pretty=True)
-        apiserver_pod_status = apiserver_pod_info.status.phase
-        if apiserver_pod_status == "Running":
-            apiserver_ready_pods.append(pod)
-        else:
-            apiserver_notready_pods.append(pod)
-    if len(apiserver_notready_pods) != 0:
-        status = False
-    else:
-        status = True
     return status
 
 # Start a simple http server to publish the cerberus status file content
@@ -126,6 +111,10 @@ def main(cfg):
         etcd_namespace = config.get('cerberus', 'etcd_namespace')
         watch_openshift_apiserver = config.get('cerberus', 'watch_openshift_apiserver')
         openshift_apiserver_namespace = config.get('cerberus', 'openshift_apiserver_namespace')
+        watch_kube_apiserver = config.get('cerberus', 'watch_kube_apiserver')
+        kube_apiserver_namespace = config.get('cerberus', 'kube_apiserver_namespace')
+        watch_monitoring_stack = config.get('cerberus', 'watch_monitoring_stack')
+        monitoring_stack_namespace = config.get('cerberus', 'monitoring_stack_namespace')
         iterations = config.get('tunings', 'iterations')
         sleep_time = config.get('tunings', 'sleep_time')
         daemon_mode = config.get('tunings', 'daemon_mode')
@@ -162,7 +151,7 @@ def main(cfg):
 
             # Monitor etcd status
             if watch_etcd == "True":
-                watch_etcd_status = monitor_etcd(etcd_namespace)
+                watch_etcd_status = monitor_namespace(etcd_namespace)
                 print("Iteration %s: ETCD member pods status: %s" %(iteration, watch_etcd_status))
                 print ("Sleeping for the specified duration: %s" %(sleep_time))
                 time.sleep(float(sleep_time))
@@ -172,16 +161,36 @@ def main(cfg):
 
             # Monitor openshift-apiserver status
             if watch_openshift_apiserver == "True":
-                watch_openshift_apiserver_status = monitor_openshift_apiserver(openshift_apiserver_namespace)
+                watch_openshift_apiserver_status = monitor_namespace(openshift_apiserver_namespace)
                 print("Iteration %s: OpenShift apiserver status: %s" %(iteration, watch_openshift_apiserver_status))
                 print ("Sleeping for the specified duration: %s" %(sleep_time))
                 time.sleep(float(sleep_time))
             else:
                 print("Cerberus is not monitoring openshift-apiserver, so setting the status to True and assuming that the openshift-apiserver is up and running")
                 watch_openshift_apiserver_status = True
+
+            # Monitor kube apiserver status
+            if watch_kube_apiserver == "True":
+                watch_kube_apiserver_status = monitor_namespace(kube_apiserver_namespace)
+                print("Iteration %s: Kube ApiServer status: %s" %(iteration, watch_kube_apiserver_status))
+                print ("Sleeping for the specified duration: %s" %(sleep_time))
+                time.sleep(float(sleep_time))
+            else:
+                print("Cerberus is not monitoring Kube ApiServer, so setting the status to True and assuming that the Kube ApiServer is up and running")
+                watch_kube_apiserver_status = True
             
+            # Monitor prometheus/monitoring stack
+            if watch_monitoring_stack == "True":
+                watch_monitoring_stack_status = monitor_namespace(monitoring_stack_namespace)
+                print("Iteration %s: Monitoring stack status: %s" %(iteration, watch_monitoring_stack_status))
+                print ("Sleeping for the specified duration: %s" %(sleep_time))
+                time.sleep(float(sleep_time))
+            else:
+                print("Cerberus is not monitoring prometheus/monitoring, so setting the status to True and assuming that the monitoring stack is up and running")
+                watch_minitoring_stack_status = True
+
             # Set the cerberus status by checking the status of the watched components/resources for the http server to publish it
-            if ( watch_nodes_status == True and watch_etcd_status == True and watch_openshift_apiserver_status == True):
+            if ( watch_nodes_status == True and watch_etcd_status == True and watch_openshift_apiserver_status == True and watch_kube_apiserver and watch_monitoring_stack_status == True):
                 cerberus_status = True
             else:
                 cerberus_status = False

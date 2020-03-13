@@ -65,4 +65,5 @@ Component                | Description                                          
 Nodes                    | Watches all the nodes including masters, workers as well as nodes created using custom MachineSets | :heavy_check_mark:        |
 Etcd                     | Watches the status of the Etcd member pods                                                         | :heavy_check_mark:        |
 OpenShift ApiServer      | Watches the OpenShift Apiserver pods                                                               | :heavy_check_mark:        |
-Kube ApiServer           | Watches the Kube APiServer pods                                                                    | In progress               |
+Kube ApiServer           | Watches the Kube APiServer pods                                                                    | :heavy_check_mark:        |
+Monitoring               | Watches the monitoring stack                                                                       | "heavu_check_mark:        |
