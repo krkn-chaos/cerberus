@@ -3,6 +3,9 @@ Guardian of Kubernetes Clusters
 
 Cerberus watches the Kubernetes/OpenShift clusters for dead nodes, system component failures and exposes a go or no-go signal which can be consumed by other workload generators or applications in the cluster and act accordingly.
 
+### Workflow
+![Cerberus workflow](images/cerberus-workflow.png)
+
 ### Install the dependencies
 ```
 $ pip3 install -r requirements.txt
@@ -50,6 +53,27 @@ daemon_mode: True
 $ python3 cerberus.py --config <config_file_location>
 ```
 
+#### Report
+The report is generated in the run directory and it contains the information about each check/monitored component status per iteration with timestamps. For example:
+```
+2020-03-14 11:59:51,882 [INFO] Starting cerberus
+2020-03-14 11:59:51,883 [INFO] Publishing cerberus status at http://localhost:8086
+2020-03-14 11:59:51,883 [INFO] Daemon mode enabled, cerberus will monitor forever
+2020-03-14 11:59:51,883 [INFO] Ignoring the iterations set
+2020-03-14 11:59:52,030 [INFO] Iteration 1: Node status: True
+2020-03-14 11:59:52,065 [INFO] Iteration 1: ETCD member pods status: True
+2020-03-14 11:59:52,095 [INFO] Iteration 1: OpenShift apiserver status: True
+2020-03-14 11:59:52,099 [INFO] Iteration 1: Kube ApiServer status: True
+2020-03-14 11:59:52,332 [INFO] Iteration 1: Monitoring stack status: True
+2020-03-14 11:59:52,332 [INFO] Sleeping for the specified duration: 60
+2020-03-14 12:00:52,443 [INFO] Iteration 2: Node status: True
+2020-03-14 12:00:52,477 [INFO] Iteration 2: ETCD member pods status: True
+2020-03-14 12:00:52,507 [INFO] Iteration 2: OpenShift apiserver status: True
+2020-03-14 12:00:52,511 [INFO] Iteration 2: Kube ApiServer status: True
+2020-03-14 12:00:52,747 [INFO] Iteration 2: Monitoring stack status: True
+2020-03-14 12:00:52,747 [INFO] Sleeping for the specified duration: 60
+```
+
 #### Go or no-go signal
 When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://localhost:8086 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly. 
 
@@ -66,4 +90,4 @@ Nodes                    | Watches all the nodes including masters, workers as w
 Etcd                     | Watches the status of the Etcd member pods                                                         | :heavy_check_mark:        |
 OpenShift ApiServer      | Watches the OpenShift Apiserver pods                                                               | :heavy_check_mark:        |
 Kube ApiServer           | Watches the Kube APiServer pods                                                                    | :heavy_check_mark:        |
-Monitoring               | Watches the monitoring stack                                                                       | "heavu_check_mark:        |
+Monitoring               | Watches the monitoring stack                                                                       | :heavy_check_mark:        |

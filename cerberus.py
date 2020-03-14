@@ -4,6 +4,7 @@ import sys, os, time, datetime
 import configparser, optparse
 import requests
 import _thread
+import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from io import BytesIO
 from kubernetes import client, config
@@ -20,7 +21,7 @@ def list_nodes():
     try:
         ret = cli.list_node(pretty=True)
     except ApiException as e:
-        print("Exception when calling CoreV1Api->list_node: %s\n" % e)
+        logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
     for node in ret.items:
         nodes.append(node.metadata.name)
     return nodes
@@ -31,7 +32,7 @@ def list_pods(namespace):
     try:
         ret = cli.list_namespaced_pod(namespace, pretty=True)
     except ApiException as e:
-        print("Exception when calling CoreV1Api->list_namespaced_pod: %s\n" % e)
+        logging.error("Exception when calling CoreV1Api->list_namespaced_pod: %s\n" % e)
     for pod in ret.items:
         pods.append(pod.metadata.name)
     return pods
@@ -45,7 +46,7 @@ def monitor_nodes():
         try:
             node_info = cli.read_node_status(node, pretty=True)
         except ApiException as e:
-            print("Exception when calling CoreV1Api->read_node_status: %s\n" % e)
+            logging.error("Exception when calling CoreV1Api->read_node_status: %s\n" % e)
         node_status = node_info.status.conditions[-1].status
         if node_status == "True":
             ready_nodes.append(node)
@@ -67,7 +68,7 @@ def monitor_namespace(namespace):
         try:
             pod_info = cli.read_namespaced_pod_status(pod, namespace, pretty=True)
         except ApiException as e:
-            print("Exception when calling CoreV1Api->read_namespaced_pod_status: %s\n" % e)
+            logging.error("Exception when calling CoreV1Api->read_namespaced_pod_status: %s\n" % e)
         pod_status = pod_info.status.phase
         if pod_status == "Running":
             ready_pods.append(pod)
@@ -119,9 +120,12 @@ def main(cfg):
         sleep_time = config.get('tunings', 'sleep_time')
         daemon_mode = config.get('tunings', 'daemon_mode')
        
-        # run http server using a separate thread if cerberus is asked to publish the status. It is served by the http server.
+        # Start cerberus
+        logging.info("Starting cerberus")
+
+        # Run http server using a separate thread if cerberus is asked to publish the status. It is served by the http server.
         if cerberus_publish_status == "True":
-            print("Publishing cerberus status at http://localhost:8086")
+            logging.info("Publishing cerberus status at http://localhost:8086")
             _thread.start_new_thread(start_server, ())
         
         # Initialize the start iteration to 0 
@@ -129,8 +133,8 @@ def main(cfg):
 
         # Set the number of iterations to loop to infinity if daemon mode is enabled or else set it to the provided iterations count in the config
         if daemon_mode == "True":
-            print("Daemon Mode enabled, cerberus will monitor forever")
-            print("Ignoring the iterations set")
+            logging.info("Daemon mode enabled, cerberus will monitor forever")
+            logging.info("Ignoring the iterations set")
             iterations = float('inf')
         else:
             iterations = int(iterations)
@@ -142,52 +146,46 @@ def main(cfg):
             # Monitor nodes status
             if watch_nodes == "True":
                 watch_nodes_status = monitor_nodes()
-                print("Iteration %s: Node status: %s" %(iteration, watch_nodes_status))
-                print ("Sleeping for the specified duration: %s" %(sleep_time))
-                time.sleep(float(sleep_time))
+                logging.info("Iteration %s: Node status: %s" %(iteration, watch_nodes_status))
             else:
-                print("Cerberus is not monitoring nodes, so setting the status to True and assuming that the nodes are ready")
+                logging.info("Cerberus is not monitoring nodes, so setting the status to True and assuming that the nodes are ready")
                 watch_nodes_status = True
 
             # Monitor etcd status
             if watch_etcd == "True":
                 watch_etcd_status = monitor_namespace(etcd_namespace)
-                print("Iteration %s: ETCD member pods status: %s" %(iteration, watch_etcd_status))
-                print ("Sleeping for the specified duration: %s" %(sleep_time))
-                time.sleep(float(sleep_time))
+                logging.info("Iteration %s: ETCD member pods status: %s" %(iteration, watch_etcd_status))
             else:
-                print("Cerberus is not monitoring ETCD, so setting the status to True and assuming that the ETCD member pods are ready")
+                logging.info("Cerberus is not monitoring ETCD, so setting the status to True and assuming that the ETCD member pods are ready")
                 watch_etcd_status = True
 
             # Monitor openshift-apiserver status
             if watch_openshift_apiserver == "True":
                 watch_openshift_apiserver_status = monitor_namespace(openshift_apiserver_namespace)
-                print("Iteration %s: OpenShift apiserver status: %s" %(iteration, watch_openshift_apiserver_status))
-                print ("Sleeping for the specified duration: %s" %(sleep_time))
-                time.sleep(float(sleep_time))
+                logging.info("Iteration %s: OpenShift apiserver status: %s" %(iteration, watch_openshift_apiserver_status))
             else:
-                print("Cerberus is not monitoring openshift-apiserver, so setting the status to True and assuming that the openshift-apiserver is up and running")
+                logging.info("Cerberus is not monitoring openshift-apiserver, so setting the status to True and assuming that the openshift-apiserver is up and running")
                 watch_openshift_apiserver_status = True
 
             # Monitor kube apiserver status
             if watch_kube_apiserver == "True":
                 watch_kube_apiserver_status = monitor_namespace(kube_apiserver_namespace)
-                print("Iteration %s: Kube ApiServer status: %s" %(iteration, watch_kube_apiserver_status))
-                print ("Sleeping for the specified duration: %s" %(sleep_time))
-                time.sleep(float(sleep_time))
+                logging.info("Iteration %s: Kube ApiServer status: %s" %(iteration, watch_kube_apiserver_status))
             else:
-                print("Cerberus is not monitoring Kube ApiServer, so setting the status to True and assuming that the Kube ApiServer is up and running")
+                logging.info("Cerberus is not monitoring Kube ApiServer, so setting the status to True and assuming that the Kube ApiServer is up and running")
                 watch_kube_apiserver_status = True
             
             # Monitor prometheus/monitoring stack
             if watch_monitoring_stack == "True":
                 watch_monitoring_stack_status = monitor_namespace(monitoring_stack_namespace)
-                print("Iteration %s: Monitoring stack status: %s" %(iteration, watch_monitoring_stack_status))
-                print ("Sleeping for the specified duration: %s" %(sleep_time))
-                time.sleep(float(sleep_time))
+                logging.info("Iteration %s: Monitoring stack status: %s" %(iteration, watch_monitoring_stack_status))
             else:
-                print("Cerberus is not monitoring prometheus/monitoring, so setting the status to True and assuming that the monitoring stack is up and running")
+                logging.info("Cerberus is not monitoring prometheus/monitoring, so setting the status to True and assuming that the monitoring stack is up and running")
                 watch_minitoring_stack_status = True
+
+            # Sleep for the specified duration
+            logging.info("Sleeping for the specified duration: %s" %(sleep_time))
+            time.sleep(float(sleep_time))
 
             # Set the cerberus status by checking the status of the watched components/resources for the http server to publish it
             if ( watch_nodes_status == True and watch_etcd_status == True and watch_openshift_apiserver_status == True and watch_kube_apiserver and watch_monitoring_stack_status == True):
@@ -197,9 +195,9 @@ def main(cfg):
             if cerberus_publish_status == "True":
                publish_cerberus_status(cerberus_status)
         else:
-            print("Completed watching for the specified number of iterations: %s" %(iterations))
+            logging.info("Completed watching for the specified number of iterations: %s" %(iterations))
     else:
-        print ("Could not find a config at %s, please check"%(cfg))
+        logging.error("Could not find a config at %s, please check"%(cfg))
         sys.exit(1)
 
 if __name__ == "__main__":
@@ -207,8 +205,16 @@ if __name__ == "__main__":
     parser = optparse.OptionParser()
     parser.add_option("-c", "--config", dest="cfg", help="config location")
     (options, args) = parser.parse_args()
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler("cerberus.report", mode='w'),
+            logging.StreamHandler()
+        ]
+    )
     if (options.cfg is None):
-        print ("Please check if you have passed the config")
+        logging.error("Please check if you have passed the config")
         sys.exit(1)
     else:
         main(options.cfg)
