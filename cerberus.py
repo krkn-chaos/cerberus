@@ -72,7 +72,7 @@ def monitor_namespace(namespace):
         pod_status = pod_info.status.phase
         if pod_status == "Running":
             ready_pods.append(pod)
-        elif pod_status == "Completed":
+        elif ( pod_status == "Completed" or pod_status == "Succeeded" ):
             completed_pods.append(pod)
         else:
            notready_pods.append(pod)
@@ -116,6 +116,8 @@ def main(cfg):
         kube_apiserver_namespace = config.get('cerberus', 'kube_apiserver_namespace')
         watch_monitoring_stack = config.get('cerberus', 'watch_monitoring_stack')
         monitoring_stack_namespace = config.get('cerberus', 'monitoring_stack_namespace')
+        watch_kube_controller = config.get('cerberus', 'watch_kube_controller')
+        kube_controller_namespace = config.get('cerberus', 'kube_controller_namespace')
         iterations = config.get('tunings', 'iterations')
         sleep_time = config.get('tunings', 'sleep_time')
         daemon_mode = config.get('tunings', 'daemon_mode')
@@ -154,7 +156,7 @@ def main(cfg):
             # Monitor etcd status
             if watch_etcd == "True":
                 watch_etcd_status = monitor_namespace(etcd_namespace)
-                logging.info("Iteration %s: ETCD member pods status: %s" %(iteration, watch_etcd_status))
+                logging.info("Iteration %s: Etcd member pods status: %s" %(iteration, watch_etcd_status))
             else:
                 logging.info("Cerberus is not monitoring ETCD, so setting the status to True and assuming that the ETCD member pods are ready")
                 watch_etcd_status = True
@@ -181,14 +183,22 @@ def main(cfg):
                 logging.info("Iteration %s: Monitoring stack status: %s" %(iteration, watch_monitoring_stack_status))
             else:
                 logging.info("Cerberus is not monitoring prometheus/monitoring, so setting the status to True and assuming that the monitoring stack is up and running")
-                watch_minitoring_stack_status = True
+                watch_monitoring_stack_status = True
+
+            # Monitor kube controller
+            if watch_kube_controller == "True":
+                watch_kube_controller_status = monitor_namespace(kube_controller_namespace)
+                logging.info("Iteration %s: Kube controller status: %s" %(iteration, watch_kube_controller_status))
+            else:
+                logging.info("Cerberus is not monitoring kube controller, so setting the status to True and assuming that the kube controller is up and running")
+                watch_kube_controller_status = True
 
             # Sleep for the specified duration
             logging.info("Sleeping for the specified duration: %s" %(sleep_time))
             time.sleep(float(sleep_time))
 
             # Set the cerberus status by checking the status of the watched components/resources for the http server to publish it
-            if ( watch_nodes_status == True and watch_etcd_status == True and watch_openshift_apiserver_status == True and watch_kube_apiserver and watch_monitoring_stack_status == True):
+            if ( watch_nodes_status == True and watch_etcd_status == True and watch_openshift_apiserver_status == True and watch_kube_apiserver and watch_monitoring_stack_status == True and watch_kube_controller == True ):
                 cerberus_status = True
             else:
                 cerberus_status = False
