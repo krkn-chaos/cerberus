@@ -63,7 +63,7 @@ def monitor_nodes():
         status = False
     else:
         status = True
-    return status
+    return status, notready_nodes
 
 
 # Monitor the status of the pods in the specified namespace
@@ -91,7 +91,7 @@ def monitor_namespace(namespace):
         status = False
     else:
         status = True
-    return status
+    return status, notready_pods
 
 
 # Start a simple http server to publish the cerberus status file content
@@ -171,88 +171,84 @@ def main(cfg):
         # Loop to run the components status checks starts here
         while (int(iteration) < iterations):
             iteration += 1
+            print("\n")
 
             # Monitor nodes status
             if watch_nodes == "True":
-                watch_nodes_status = monitor_nodes()
-                logging.info("Iteration %s: Node status: \
-                              %s" % (iteration, watch_nodes_status))
+                watch_nodes_status, failed_nodes = monitor_nodes()
+                logging.info("Iteration %s: Node status: %s"
+                             % (iteration, watch_nodes_status))
             else:
-                logging.info("Cerberus is not monitoring nodes,\
-                              so setting the status to True and \
-                              assuming that the nodes are ready")
+                logging.info("Cerberus is not monitoring nodes, "
+                             "so setting the status to True and "
+                             "assuming that the nodes are ready")
                 watch_nodes_status = True
 
             # Monitor etcd status
             if watch_etcd == "True":
-                watch_etcd_status = monitor_namespace(etcd_namespace)
-                logging.info("Iteration %s: \
-                              Etcd member pods status: \
-                              %s" % (iteration, watch_etcd_status))
+                watch_etcd_status, failed_etcd_pods = \
+                    monitor_namespace(etcd_namespace)
+                logging.info("Iteration %s: Etcd member pods status: %s"
+                             % (iteration, watch_etcd_status))
             else:
-                logging.info("Cerberus is not monitoring ETCD,\
-                              so setting the status to True and \
-                              assuming that the ETCD member pods are ready")
+                logging.info("Cerberus is not monitoring ETCD, "
+                             "so setting the status to True and "
+                             "assuming that the ETCD member pods are ready")
                 watch_etcd_status = True
 
             # Monitor openshift-apiserver status
             if watch_openshift_apiserver == "True":
-                watch_openshift_apiserver_status = \
+                watch_openshift_apiserver_status, failed_ocp_apiserver_pods = \
                     monitor_namespace(openshift_apiserver_namespace)
-                logging.info("Iteration %s: \
-                              OpenShift apiserver status: \
-                              %s" % (iteration,
-                                     watch_openshift_apiserver_status))
+                logging.info("Iteration %s: OpenShift apiserver status: %s"
+                             % (iteration, watch_openshift_apiserver_status))
             else:
-                logging.info("Cerberus is not monitoring openshift-apiserver,\
-                              so setting the status to True \
-                              and assuming that the \
-                              openshift-apiserver is up and running")
+                logging.info("Cerberus is not monitoring openshift-apiserver, "
+                             "so setting the status to True "
+                             "and assuming that the "
+                             "openshift-apiserver is up and running")
                 watch_openshift_apiserver_status = True
 
             # Monitor kube apiserver status
             if watch_kube_apiserver == "True":
-                watch_kube_apiserver_status = \
+                watch_kube_apiserver_status, failed_kube_apiserver_pods = \
                     monitor_namespace(kube_apiserver_namespace)
-                logging.info("Iteration %s: \
-                              Kube ApiServer status: \
-                              %s" % (iteration, watch_kube_apiserver_status))
+                logging.info("Iteration %s: Kube ApiServer status: %s"
+                             % (iteration, watch_kube_apiserver_status))
             else:
-                logging.info("Cerberus is not monitoring Kube ApiServer, so \
-                              setting the status to True and assuming that \
-                              the Kube ApiServer is up and running")
+                logging.info("Cerberus is not monitoring Kube ApiServer, so "
+                             "setting the status to True and assuming that "
+                             "the Kube ApiServer is up and running")
                 watch_kube_apiserver_status = True
 
             # Monitor prometheus/monitoring stack
             if watch_monitoring_stack == "True":
-                watch_monitoring_stack_status = \
+                watch_monitoring_stack_status, failed_monitoring_stack = \
                     monitor_namespace(monitoring_stack_namespace)
-                logging.info("Iteration %s: \
-                              Monitoring stack status: \
-                              %s" % (iteration, watch_monitoring_stack_status))
+                logging.info("Iteration %s: Monitoring stack status: %s"
+                             % (iteration, watch_monitoring_stack_status))
             else:
-                logging.info("Cerberus is not monitoring prometheus/monitoring\
-                             , so setting the status to True \
-                             and assuming that the monitoring stack is \
-                             up and running")
+                logging.info("Cerberus is not monitoring prometheus stack, "
+                             "so setting the status to True "
+                             "and assuming that the monitoring stack is "
+                             "up and running")
                 watch_monitoring_stack_status = True
 
             # Monitor kube controller
             if watch_kube_controller == "True":
-                watch_kube_controller_status = \
+                watch_kube_controller_status, failed_kube_controller_pods = \
                     monitor_namespace(kube_controller_namespace)
-                logging.info("Iteration %s: \
-                              Kube controller status: \
-                              %s" % (iteration, watch_kube_controller_status))
+                logging.info("Iteration %s: Kube controller status: %s"
+                             % (iteration, watch_kube_controller_status))
             else:
-                logging.info("Cerberus is not monitoring kube controller, so \
-                              setting the status to True and assuming that \
-                              the kube controller is up and running")
+                logging.info("Cerberus is not monitoring kube controller, so "
+                             "setting the status to True and assuming that "
+                             "the kube controller is up and running")
                 watch_kube_controller_status = True
 
             # Sleep for the specified duration
-            logging.info("Sleeping for the \
-                          specified duration: %s" % (sleep_time))
+            logging.info("Sleeping for the "
+                         "specified duration: %s" % (sleep_time))
             time.sleep(float(sleep_time))
 
             # Set the cerberus status by checking the status of the
@@ -265,11 +261,23 @@ def main(cfg):
                 cerberus_status = True
             else:
                 cerberus_status = False
+                logging.info("Failed nodes: %s\n"
+                             "Failed etcd pods: %s\n"
+                             "Failed openshift apiserver pods: %s\n"
+                             "Failed kube apiserver pods: %s\n"
+                             "Failed monitoring stack components: %s\n"
+                             "Failed kube controller pods: %s "
+                             % (failed_nodes, failed_etcd_pods,
+                                failed_ocp_apiserver_pods,
+                                failed_kube_apiserver_pods,
+                                failed_monitoring_stack,
+                                failed_kube_controller_pods))
+
             if cerberus_publish_status == "True":
                 publish_cerberus_status(cerberus_status)
         else:
-            logging.info("Completed watching for the specified number of \
-                          iterations: %s" % (iterations))
+            logging.info("Completed watching for the specified number of "
+                         "iterations: %s" % (iterations))
     else:
         logging.error("Could not find a config at %s, please check" % (cfg))
         sys.exit(1)

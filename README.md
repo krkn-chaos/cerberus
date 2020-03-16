@@ -56,22 +56,28 @@ $ python3 src/cerberus.py --config <config_file_location>
 #### Report
 The report is generated in the run directory and it contains the information about each check/monitored component status per iteration with timestamps. For example:
 ```
-2020-03-14 11:59:51,882 [INFO] Starting cerberus
-2020-03-14 11:59:51,883 [INFO] Publishing cerberus status at http://localhost:8086
-2020-03-14 11:59:51,883 [INFO] Daemon mode enabled, cerberus will monitor forever
-2020-03-14 11:59:51,883 [INFO] Ignoring the iterations set
-2020-03-14 11:59:52,030 [INFO] Iteration 1: Node status: True
-2020-03-14 11:59:52,065 [INFO] Iteration 1: ETCD member pods status: True
-2020-03-14 11:59:52,095 [INFO] Iteration 1: OpenShift apiserver status: True
-2020-03-14 11:59:52,099 [INFO] Iteration 1: Kube ApiServer status: True
-2020-03-14 11:59:52,332 [INFO] Iteration 1: Monitoring stack status: True
-2020-03-14 11:59:52,332 [INFO] Sleeping for the specified duration: 60
-2020-03-14 12:00:52,443 [INFO] Iteration 2: Node status: True
-2020-03-14 12:00:52,477 [INFO] Iteration 2: ETCD member pods status: True
-2020-03-14 12:00:52,507 [INFO] Iteration 2: OpenShift apiserver status: True
-2020-03-14 12:00:52,511 [INFO] Iteration 2: Kube ApiServer status: True
-2020-03-14 12:00:52,747 [INFO] Iteration 2: Monitoring stack status: True
-2020-03-14 12:00:52,747 [INFO] Sleeping for the specified duration: 60
+2020-03-16 23:47:57,396 [INFO] Starting cerberus
+2020-03-16 23:47:57,396 [INFO] Publishing cerberus status at http://localhost:8086
+2020-03-16 23:47:57,396 [INFO] Daemon mode enabled, cerberus will monitor forever
+2020-03-16 23:47:57,396 [INFO] Ignoring the iterations set
+
+
+2020-03-16 23:47:57,512 [INFO] Iteration 1: Node status: True
+2020-03-16 23:47:57,549 [INFO] Iteration 1: Etcd member pods status: True
+2020-03-16 23:47:57,584 [INFO] Iteration 1: OpenShift apiserver status: True
+2020-03-16 23:47:57,589 [INFO] Iteration 1: Kube ApiServer status: True
+2020-03-16 23:47:57,841 [INFO] Iteration 1: Monitoring stack status: True
+2020-03-16 23:47:57,845 [INFO] Iteration 1: Kube controller status: True
+2020-03-16 23:47:57,846 [INFO] Sleeping for the specified duration: 60
+
+
+2020-03-16 23:48:57,977 [INFO] Iteration 2: Node status: True
+2020-03-16 23:48:58,013 [INFO] Iteration 2: Etcd member pods status: True
+2020-03-16 23:48:58,045 [INFO] Iteration 2: OpenShift apiserver status: True
+2020-03-16 23:48:58,050 [INFO] Iteration 2: Kube ApiServer status: True
+2020-03-16 23:48:58,294 [INFO] Iteration 2: Monitoring stack status: True
+2020-03-16 23:48:58,299 [INFO] Iteration 2: Kube controller status: True
+2020-03-16 23:48:58,299 [INFO] Sleeping for the specified duration: 60
 ```
 
 #### Go or no-go signal
