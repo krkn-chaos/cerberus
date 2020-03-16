@@ -14,9 +14,12 @@ from kubernetes import client, config
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
+
 # Load kubeconfig and initialize kubernetes python client
-config.load_kube_config()
-cli = client.CoreV1Api()
+def initialize_clients(kubeconfig_path):
+    global cli
+    config.load_kube_config(kubeconfig_path)
+    cli = client.CoreV1Api()
 
 
 # List nodes in the cluster
@@ -150,9 +153,15 @@ def main(cfg):
                                           'watch_kube_scheduler')
         kube_scheduler_namespace = config.get('cerberus',
                                               'kube_scheduler_namespace')
+        kubeconfig_path = config.get('cerberus', 'kubeconfig_path')
         iterations = config.get('tunings', 'iterations')
         sleep_time = config.get('tunings', 'sleep_time')
         daemon_mode = config.get('tunings', 'daemon_mode')
+
+        # Initialize clients
+        if not os.path.isfile(kubeconfig_path):
+            kubeconfig_path = None
+        initialize_clients(kubeconfig_path)
 
         # Start cerberus
         logging.info("Starting cerberus")
