@@ -50,7 +50,7 @@ daemon_mode: True
 
 #### Run
 ```
-$ python3 cerberus.py --config <config_file_location>
+$ python3 src/cerberus.py --config <config_file_location>
 ```
 
 #### Report
@@ -75,7 +75,7 @@ The report is generated in the run directory and it contains the information abo
 ```
 
 #### Go or no-go signal
-When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://localhost:8086 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly. 
+When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://localhost:8086 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly.
 
 #### Usecase
 There can be number of usecases, here is one of them:
