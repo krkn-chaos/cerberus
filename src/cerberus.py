@@ -8,6 +8,7 @@ import optparse
 import requests
 import _thread
 import logging
+from kubernetes.client.rest import ApiException
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from kubernetes import client, config
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -23,7 +24,7 @@ def list_nodes():
     nodes = []
     try:
         ret = cli.list_node(pretty=True)
-    except ApiException as e: # noqa # this exception needs to be defined
+    except ApiException as e:
         logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
     for node in ret.items:
         nodes.append(node.metadata.name)
@@ -35,7 +36,7 @@ def list_pods(namespace):
     pods = []
     try:
         ret = cli.list_namespaced_pod(namespace, pretty=True)
-    except ApiException as e: # noqa # this exception needs to be defined
+    except ApiException as e:
         logging.error("Exception when calling \
                        CoreV1Api->list_namespaced_pod: %s\n" % e)
     for pod in ret.items:
@@ -51,7 +52,7 @@ def monitor_nodes():
     for node in nodes:
         try:
             node_info = cli.read_node_status(node, pretty=True)
-        except ApiException as e: # noqa # this exception needs to be defined
+        except ApiException as e:
             logging.error("Exception when calling \
                            CoreV1Api->read_node_status: %s\n" % e)
         node_status = node_info.status.conditions[-1].status
@@ -77,7 +78,7 @@ def monitor_namespace(namespace):
         try:
             pod_info = cli.read_namespaced_pod_status(pod, namespace,
                                                       pretty=True)
-        except ApiException as e: # noqa # this exception needs to be defined
+        except ApiException as e:
             logging.error("Exception when calling \
                            CoreV1Api->read_namespaced_pod_status: %s\n" % e)
         pod_status = pod_info.status.phase
