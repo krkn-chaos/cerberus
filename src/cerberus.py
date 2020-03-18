@@ -146,6 +146,10 @@ def main(cfg):
                                        'watch_machine_api_components')
         machine_api_namespace = config.get('cerberus',
                                            'machine_api_namespace')
+        watch_kube_scheduler = config.get('cerberus',
+                                          'watch_kube_scheduler')
+        kube_scheduler_namespace = config.get('cerberus',
+                                              'kube_scheduler_namespace')
         iterations = config.get('tunings', 'iterations')
         sleep_time = config.get('tunings', 'sleep_time')
         daemon_mode = config.get('tunings', 'daemon_mode')
@@ -264,6 +268,18 @@ def main(cfg):
                              "assuming that it is up and running")
                 watch_machine_api_status = True
 
+            # Monitor kube scheduler
+            if watch_kube_scheduler == "True":
+                watch_kube_scheduler_status, failed_kube_scheduler_pods = \
+                    monitor_namespace(kube_scheduler_namespace)
+                logging.info("Iteration %s: Kube scheduler status: %s"
+                             % (iteration, watch_kube_scheduler_status))
+            else:
+                logging.info("Cerberus is not monitoring kube scheduler, so "
+                             "setting the status to True and assuming that "
+                             "the kube scheduler is up and running")
+                watch_kube_scheduler_status = True
+
             # Sleep for the specified duration
             logging.info("Sleeping for the "
                          "specified duration: %s" % (sleep_time))
@@ -273,10 +289,11 @@ def main(cfg):
             # watched components/resources for the http server to publish it
             if watch_nodes_status and watch_etcd_status \
                 and watch_openshift_apiserver_status \
-                and watch_kube_apiserver \
+                and watch_kube_apiserver_status \
                 and watch_monitoring_stack_status \
                 and watch_kube_controller_status \
-                and watch_machine_api_status:
+                and watch_machine_api_status \
+                and watch_kube_scheduler_status:
                 cerberus_status = True
             else:
                 cerberus_status = False
@@ -287,12 +304,14 @@ def main(cfg):
                              "Failed monitoring stack components: %s\n"
                              "Failed kube controller pods: %s\n"
                              "Failed machine api components: %s "
+                             "Failed kube scheduler pods: %s "
                              % (failed_nodes, failed_etcd_pods,
                                 failed_ocp_apiserver_pods,
                                 failed_kube_apiserver_pods,
                                 failed_monitoring_stack,
                                 failed_kube_controller_pods,
-                                failed_machine_api_components))
+                                failed_machine_api_components,
+                                failed_kube_scheduler_pods))
 
             if cerberus_publish_status == "True":
                 publish_cerberus_status(cerberus_status)

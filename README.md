@@ -107,3 +107,6 @@ OpenShift ApiServer      | Watches the OpenShift Apiserver pods                 
 Kube ApiServer           | Watches the Kube APiServer pods                                                                    | :heavy_check_mark:        |
 Monitoring               | Watches the monitoring stack                                                                       | :heavy_check_mark:        |
 Kube Controller          | Watches Kube controller                                                                            | :heavy_check_mark:        |
+Machine API              | Watches machine controller, cluster auto-scaler, machine-api-operator                              | :heavy_check_mark:        |
+Kube Scheduler           | Watches Kube scheduler                                                                             | :heavy_check_mark:        |
+
