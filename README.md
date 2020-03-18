@@ -14,7 +14,7 @@ $ pip3 install -r requirements.txt
 ### Usage
 
 #### Config
-Set the supported components to monitor and the tunings like number of iterations to monitor and duration to wait between each check in the config file. A sample config looks like:
+Set the supported components to monitor and the tunings like number of iterations to monitor and duration to wait between each check in the config file located at config/config.ini. A sample config looks like:
 
 ```
 [cerberus]
@@ -54,30 +54,39 @@ $ python3 src/cerberus.py --config <config_file_location>
 ```
 
 #### Report
-The report is generated in the run directory and it contains the information about each check/monitored component status per iteration with timestamps. For example:
+The report is generated in the run directory and it contains the information about each check/monitored component status per iteration with timestamps. It also displays information about the components in case of failure. For example:
 ```
-2020-03-16 23:47:57,396 [INFO] Starting cerberus
-2020-03-16 23:47:57,396 [INFO] Publishing cerberus status at http://localhost:8086
-2020-03-16 23:47:57,396 [INFO] Daemon mode enabled, cerberus will monitor forever
-2020-03-16 23:47:57,396 [INFO] Ignoring the iterations set
+2020-03-18 01:06:30,668 [INFO] Starting cerberus
+2020-03-18 01:06:30,669 [INFO] Publishing cerberus status at http://localhost:8086
+2020-03-18 01:06:30,669 [INFO] Daemon mode enabled, cerberus will monitor forever
+2020-03-18 01:06:30,669 [INFO] Ignoring the iterations set
 
 
-2020-03-16 23:47:57,512 [INFO] Iteration 1: Node status: True
-2020-03-16 23:47:57,549 [INFO] Iteration 1: Etcd member pods status: True
-2020-03-16 23:47:57,584 [INFO] Iteration 1: OpenShift apiserver status: True
-2020-03-16 23:47:57,589 [INFO] Iteration 1: Kube ApiServer status: True
-2020-03-16 23:47:57,841 [INFO] Iteration 1: Monitoring stack status: True
-2020-03-16 23:47:57,845 [INFO] Iteration 1: Kube controller status: True
-2020-03-16 23:47:57,846 [INFO] Sleeping for the specified duration: 60
+2020-03-18 01:06:30,768 [INFO] Iteration 1: Node status: True
+2020-03-18 01:06:30,799 [INFO] Iteration 1: Etcd member pods status: True
+2020-03-18 01:06:30,825 [INFO] Iteration 1: OpenShift apiserver status: True
+2020-03-18 01:06:30,829 [INFO] Iteration 1: Kube ApiServer status: True
+2020-03-18 01:06:31,039 [INFO] Iteration 1: Monitoring stack status: True
+2020-03-18 01:06:31,042 [INFO] Iteration 1: Kube controller status: True
+2020-03-18 01:06:31,068 [INFO] Iteration 1: Machine API components status: True
+2020-03-18 01:06:31,068 [INFO] Sleeping for the specified duration: 5
 
 
-2020-03-16 23:48:57,977 [INFO] Iteration 2: Node status: True
-2020-03-16 23:48:58,013 [INFO] Iteration 2: Etcd member pods status: True
-2020-03-16 23:48:58,045 [INFO] Iteration 2: OpenShift apiserver status: True
-2020-03-16 23:48:58,050 [INFO] Iteration 2: Kube ApiServer status: True
-2020-03-16 23:48:58,294 [INFO] Iteration 2: Monitoring stack status: True
-2020-03-16 23:48:58,299 [INFO] Iteration 2: Kube controller status: True
-2020-03-16 23:48:58,299 [INFO] Sleeping for the specified duration: 60
+2020-03-18 01:06:36,151 [INFO] Iteration 2: Node status: True
+2020-03-18 01:06:36,180 [INFO] Iteration 2: Etcd member pods status: True
+2020-03-18 01:06:36,206 [INFO] Iteration 2: OpenShift apiserver status: False
+2020-03-18 01:06:36,211 [INFO] Iteration 2: Kube ApiServer status: True
+2020-03-18 01:06:36,413 [INFO] Iteration 2: Monitoring stack status: True
+2020-03-18 01:06:36,418 [INFO] Iteration 2: Kube controller status: True
+2020-03-18 01:06:36,442 [INFO] Iteration 2: Machine API components status: True
+2020-03-18 01:06:36,442 [INFO] Sleeping for the specified duration: 5
+Failed nodes: []
+Failed etcd pods: []
+Failed openshift apiserver pods: ['apiserver-dvkjc']
+Failed kube apiserver pods: []
+Failed monitoring stack components: []
+Failed kube controller pods: []
+Failed machine api components: [] 
 ```
 
 #### Go or no-go signal
