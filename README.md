@@ -53,6 +53,25 @@ daemon_mode: True
 $ python3 src/cerberus.py --config <config_file_location>
 ```
 
+#### Run containerized version
+Assuming that the latest docker ( 17.05 or greater with multi-build support ) is intalled on the host, run:
+```
+$ cd containers
+$ docker build -t cerberus:latest .
+$ docker run --name=cerberus -v <path_to_kubeconfig>:/root/.kube/config -v <path_to_cerberus_config>:/root/cerberus/config/config.ini -d cerberus:latest
+$ docker logs -f cerberus
+```
+
+Similarly, podman can be used to achieve the same:
+```
+$ cd containers
+$ podman build -t cerberus:latest .
+$ podman run --name=cerberus -v <path_to_kubeconfig>:/root/.kube/config:Z -v <path_to_cerberus_config>:/root/cerberus/config/config.ini:Z -d cerberus:latest
+$ podman logs -f cerberus
+```
+
+NOTE: The report is generated at /root/cerberus/cerberus.report inside the container, it can mounted to a directory on the host in case we want to capture it.
+
 #### Report
 The report is generated in the run directory and it contains the information about each check/monitored component status per iteration with timestamps. It also displays information about the components in case of failure. For example:
 ```
