@@ -109,7 +109,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 def start_server():
-    httpd = HTTPServer(('localhost', 8086), SimpleHTTPRequestHandler)
+    httpd = HTTPServer(('0.0.0.0', 8080), SimpleHTTPRequestHandler)
     httpd.serve_forever()
 
 
@@ -170,7 +170,7 @@ def main(cfg):
         # if cerberus is asked to publish the status.
         # It is served by the http server.
         if cerberus_publish_status == "True":
-            logging.info("Publishing cerberus status at http://localhost:8086")
+            logging.info("Publishing cerberus status at http://0.0.0.0:8080")
             _thread.start_new_thread(start_server, ())
 
         # Initialize the start iteration to 0
