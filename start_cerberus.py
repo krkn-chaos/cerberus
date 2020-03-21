@@ -5,112 +5,10 @@ import os
 import time
 import configparser
 import optparse
-import requests
-import _thread
 import logging
-from kubernetes.client.rest import ApiException
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from kubernetes import client, config
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-
-
-# Load kubeconfig and initialize kubernetes python client
-def initialize_clients(kubeconfig_path):
-    global cli
-    config.load_kube_config(kubeconfig_path)
-    cli = client.CoreV1Api()
-
-
-# List nodes in the cluster
-def list_nodes():
-    nodes = []
-    try:
-        ret = cli.list_node(pretty=True)
-    except ApiException as e:
-        logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
-    for node in ret.items:
-        nodes.append(node.metadata.name)
-    return nodes
-
-
-# List pods in the given namespace
-def list_pods(namespace):
-    pods = []
-    try:
-        ret = cli.list_namespaced_pod(namespace, pretty=True)
-    except ApiException as e:
-        logging.error("Exception when calling \
-                       CoreV1Api->list_namespaced_pod: %s\n" % e)
-    for pod in ret.items:
-        pods.append(pod.metadata.name)
-    return pods
-
-
-# Monitor the status of the cluster nodes and set the status to true or false
-def monitor_nodes():
-    nodes = list_nodes()
-    ready_nodes = []
-    notready_nodes = []
-    for node in nodes:
-        try:
-            node_info = cli.read_node_status(node, pretty=True)
-        except ApiException as e:
-            logging.error("Exception when calling \
-                           CoreV1Api->read_node_status: %s\n" % e)
-        node_status = node_info.status.conditions[-1].status
-        if node_status == "True":
-            ready_nodes.append(node)
-        else:
-            notready_nodes.append(node)
-    if len(notready_nodes) != 0:
-        status = False
-    else:
-        status = True
-    return status, notready_nodes
-
-
-# Monitor the status of the pods in the specified namespace
-# and set the status to true or false
-def monitor_namespace(namespace):
-    pods = list_pods(namespace)
-    ready_pods = []
-    completed_pods = []
-    notready_pods = []
-    for pod in pods:
-        try:
-            pod_info = cli.read_namespaced_pod_status(pod, namespace,
-                                                      pretty=True)
-        except ApiException as e:
-            logging.error("Exception when calling \
-                           CoreV1Api->read_namespaced_pod_status: %s\n" % e)
-        pod_status = pod_info.status.phase
-        if pod_status == "Running":
-            ready_pods.append(pod)
-        elif (pod_status == "Completed" or pod_status == "Succeeded"):
-            completed_pods.append(pod)
-        else:
-            notready_pods.append(pod)
-    if len(notready_pods) != 0:
-        status = False
-    else:
-        status = True
-    return status, notready_pods
-
-
-# Start a simple http server to publish the cerberus status file content
-class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
-
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        f = open('/tmp/cerberus_status', 'rb')
-        self.wfile.write(f.read())
-
-
-def start_server():
-    httpd = HTTPServer(('0.0.0.0', 8080), SimpleHTTPRequestHandler)
-    httpd.serve_forever()
+import cerberus.kubernetes.client as kubecli
+import cerberus.invoke.command as runcommand
+import cerberus.server.server as server
 
 
 # Publish the cerberus status
@@ -121,6 +19,9 @@ def publish_cerberus_status(status):
 
 # Main function
 def main(cfg):
+    # Start cerberus
+    logging.info("Starting ceberus")
+
     # Parse and read the config
     if os.path.isfile(cfg):
         config = configparser.ConfigParser()
@@ -161,17 +62,25 @@ def main(cfg):
         # Initialize clients
         if not os.path.isfile(kubeconfig_path):
             kubeconfig_path = None
-        initialize_clients(kubeconfig_path)
+        logging.info("Initializing client to talk to the Kubernetes cluster")
+        kubecli.initialize_clients(kubeconfig_path)
 
-        # Start cerberus
-        logging.info("Starting cerberus")
+        # Cluster info
+        logging.info("Fetching cluster info")
+        cluster_version = runcommand.invoke("kubectl get clusterversion")
+        cluster_info = runcommand.invoke("kubectl cluster-info | awk 'NR==1'")
+        print("%s %s" % (cluster_version, cluster_info))
 
         # Run http server using a separate thread
         # if cerberus is asked to publish the status.
         # It is served by the http server.
         if cerberus_publish_status == "True":
-            logging.info("Publishing cerberus status at http://0.0.0.0:8080")
-            _thread.start_new_thread(start_server, ())
+            address = ("0.0.0.0", 8080)
+            server_address = address[0]
+            port = address[1]
+            logging.info("Publishing cerberus status at http://%s:%s"
+                         % (server_address, port))
+            server.start_server(address)
 
         # Initialize the start iteration to 0
         iteration = 0
@@ -193,7 +102,7 @@ def main(cfg):
 
             # Monitor nodes status
             if watch_nodes == "True":
-                watch_nodes_status, failed_nodes = monitor_nodes()
+                watch_nodes_status, failed_nodes = kubecli.monitor_nodes()
                 logging.info("Iteration %s: Node status: %s"
                              % (iteration, watch_nodes_status))
             else:
@@ -205,7 +114,7 @@ def main(cfg):
             # Monitor etcd status
             if watch_etcd == "True":
                 watch_etcd_status, failed_etcd_pods = \
-                    monitor_namespace(etcd_namespace)
+                    kubecli.monitor_namespace(etcd_namespace)
                 logging.info("Iteration %s: Etcd member pods status: %s"
                              % (iteration, watch_etcd_status))
             else:
@@ -217,7 +126,7 @@ def main(cfg):
             # Monitor openshift-apiserver status
             if watch_openshift_apiserver == "True":
                 watch_openshift_apiserver_status, failed_ocp_apiserver_pods = \
-                    monitor_namespace(openshift_apiserver_namespace)
+                    kubecli.monitor_namespace(openshift_apiserver_namespace)
                 logging.info("Iteration %s: OpenShift apiserver status: %s"
                              % (iteration, watch_openshift_apiserver_status))
             else:
@@ -230,7 +139,7 @@ def main(cfg):
             # Monitor kube apiserver status
             if watch_kube_apiserver == "True":
                 watch_kube_apiserver_status, failed_kube_apiserver_pods = \
-                    monitor_namespace(kube_apiserver_namespace)
+                    kubecli.monitor_namespace(kube_apiserver_namespace)
                 logging.info("Iteration %s: Kube ApiServer status: %s"
                              % (iteration, watch_kube_apiserver_status))
             else:
@@ -242,7 +151,7 @@ def main(cfg):
             # Monitor prometheus/monitoring stack
             if watch_monitoring_stack == "True":
                 watch_monitoring_stack_status, failed_monitoring_stack = \
-                    monitor_namespace(monitoring_stack_namespace)
+                    kubecli.monitor_namespace(monitoring_stack_namespace)
                 logging.info("Iteration %s: Monitoring stack status: %s"
                              % (iteration, watch_monitoring_stack_status))
             else:
@@ -255,7 +164,7 @@ def main(cfg):
             # Monitor kube controller
             if watch_kube_controller == "True":
                 watch_kube_controller_status, failed_kube_controller_pods = \
-                    monitor_namespace(kube_controller_namespace)
+                    kubecli.monitor_namespace(kube_controller_namespace)
                 logging.info("Iteration %s: Kube controller status: %s"
                              % (iteration, watch_kube_controller_status))
             else:
@@ -268,7 +177,7 @@ def main(cfg):
             # Components includes operator, controller and auto scaler
             if watch_machine_api == "True":
                 watch_machine_api_status, failed_machine_api_components = \
-                    monitor_namespace(machine_api_namespace)
+                    kubecli.monitor_namespace(machine_api_namespace)
                 logging.info("Iteration %s: Machine API components status: %s"
                              % (iteration, watch_machine_api_status))
             else:
@@ -280,7 +189,7 @@ def main(cfg):
             # Monitor kube scheduler
             if watch_kube_scheduler == "True":
                 watch_kube_scheduler_status, failed_kube_scheduler_pods = \
-                    monitor_namespace(kube_scheduler_namespace)
+                    kubecli.monitor_namespace(kube_scheduler_namespace)
                 logging.info("Iteration %s: Kube scheduler status: %s"
                              % (iteration, watch_kube_scheduler_status))
             else:
