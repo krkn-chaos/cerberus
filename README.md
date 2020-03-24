@@ -58,7 +58,7 @@ Assuming that the latest docker ( 17.05 or greater with multi-build support ) is
 ```
 $ cd containers
 $ docker build -t cerberus:latest .
-$ docker run --name=cerberus -v <path_to_kubeconfig>:/root/.kube/config -v <path_to_cerberus_config>:/root/cerberus/config/config.ini -d cerberus:latest
+$ docker run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config -v <path_to_cerberus_config>:/root/cerberus/config/config.ini -d cerberus:latest
 $ docker logs -f cerberus
 ```
 
@@ -66,9 +66,10 @@ Similarly, podman can be used to achieve the same:
 ```
 $ cd containers
 $ podman build -t cerberus:latest .
-$ podman run --name=cerberus -v <path_to_kubeconfig>:/root/.kube/config:Z -v <path_to_cerberus_config>:/root/cerberus/config/config.ini:Z -d cerberus:latest
+$ podman run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config:Z -v <path_to_cerberus_config>:/root/cerberus/config/config.ini:Z -d cerberus:latest
 $ podman logs -f cerberus
 ```
+The go/no-go signal ( True or False ) gets published at http://<hostname>:8080. Note that the cerberus will only support ipv4 for the time being.
 
 NOTE: The report is generated at /root/cerberus/cerberus.report inside the container, it can mounted to a directory on the host in case we want to capture it.
 
@@ -76,7 +77,7 @@ NOTE: The report is generated at /root/cerberus/cerberus.report inside the conta
 The report is generated in the run directory and it contains the information about each check/monitored component status per iteration with timestamps. It also displays information about the components in case of failure. For example:
 ```
 2020-03-18 01:06:30,668 [INFO] Starting cerberus
-2020-03-18 01:06:30,669 [INFO] Publishing cerberus status at http://localhost:8086
+2020-03-18 01:06:30,669 [INFO] Publishing cerberus status at http://0.0.0.0:8080
 2020-03-18 01:06:30,669 [INFO] Daemon mode enabled, cerberus will monitor forever
 2020-03-18 01:06:30,669 [INFO] Ignoring the iterations set
 
@@ -109,11 +110,13 @@ Failed machine api components: []
 ```
 
 #### Go or no-go signal
-When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://localhost:8086 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly.
+When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://0.0.0.0:8080 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly.
 
 #### Usecase
 There can be number of usecases, here is one of them:
-We run tools to push the limits of Kubenetes/OpenShift to look at the performance and scalability and there are number of instances where the system components or nodes starts to degrade in which case the results are no longer valid but the workload generator continues to push the cluster till it breaks. The signal published by the Cerberus can be consumed by the workload generators to act on i.e stop the workload and notify us in this case.
+- We run tools to push the limits of Kubenetes/OpenShift to look at the performance and scalability and there are number of instances where the system components or nodes starts to degrade in which case the results are no longer valid but the workload generator continues to push the cluster till it breaks. The signal published by the Cerberus can be consumed by the workload generators to act on i.e stop the workload and notify us in this case.
+
+- When running chaos experiments on a kubernetes/OpenShift cluster, they can potentially break the components unrelated to the targeted components which means that the choas experiment won't be able to find it. The go/no-go signal can be used here to decide whether the cluster recovered from the failure injection as well as to decide whether to continue with the next chaos scenario.
 
 ### Kubernetes/OpenShift components supported
 Following are the components of Kubernetes/OpenShift that Cerberus can monitor today, we will be adding more soon.
