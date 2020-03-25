@@ -50,14 +50,14 @@ daemon_mode: True
 
 #### Run
 ```
-$ python3 src/cerberus.py --config <config_file_location>
+$ python3 start_cerberus.py --config <config_file_location>
 ```
 
 #### Run containerized version
 Assuming that the latest docker ( 17.05 or greater with multi-build support ) is intalled on the host, run:
 ```
 $ cd containers
-$ docker build -t cerberus:latest .
+$ docker pull quay.io/openshift-scale/cerberus
 $ docker run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config -v <path_to_cerberus_config>:/root/cerberus/config/config.ini -d cerberus:latest
 $ docker logs -f cerberus
 ```
@@ -65,7 +65,7 @@ $ docker logs -f cerberus
 Similarly, podman can be used to achieve the same:
 ```
 $ cd containers
-$ podman build -t cerberus:latest .
+$ podman pull quay.io/openshift-scale/cerberus
 $ podman run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config:Z -v <path_to_cerberus_config>:/root/cerberus/config/config.ini:Z -d cerberus:latest
 $ podman logs -f cerberus
 ```
