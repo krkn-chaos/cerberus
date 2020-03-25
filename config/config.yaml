@@ -1,0 +1,29 @@
+cerberus:
+    kubeconfig_path: ~/.kube/config                      # Path to kubeconfig
+    watch_nodes: True                                    # Set to True for the cerberus to monitor the cluster nodes
+    watch_etcd: True                                     # Set to True for the cerberus to monitor the etcd members
+    etcd_namespace: openshift-etcd                       # Namespace to look for the etcd member pods
+    watch_openshift_apiserver: True                      # Set to True for the cerberus to monitor openshift-apiserver pods
+    openshift_apiserver_namespace: openshift-apiserver   # Namespace to look for the openshift-apiserver pods
+    watch_kube_apiserver: True                           # Set to True for the cerberus to monitor openshift-apiserver pods
+    kube_apiserver_namespace: openshift-kube-apiserver   # Namespace to look for the kube-apiserver pods
+    watch_monitoring_stack: True                         # Set to True for the cerberus to monitor prometheus/monitoring stack pods
+    monitoring_stack_namespace: openshift-monitoring     # Namespace to look for the monitoring stack pods
+    watch_kube_controller: True                          # Set to True for the cerberus to monitor kube-controller
+    kube_controller_namespace: openshift-kube-controller # Namespace to look for the kube controller pods
+    watch_machine_api_components: True                   # Set to True for the cerberus to monitor machine api components
+    machine_api_namespace: openshift-machine-api         # Namespace to look for the Machine API components
+    watch_kube_scheduler: True                           # Set to True for the cerberus to monitor kube-scheduler
+    kube_scheduler_namespace: openshift-kube-scheduler   # Namespace to look for the kube scheduler pods
+    watch_openshift_ingress: True                        # Set to True for the cerberus to monitor openshift-ingress
+    openshift_ingress_namespace: openshift-ingress       # Namespace to look for the openshift ingress pods
+    watch_openshift_sdn: True                            # Set to True for the cerberus to monitor openshift-sdn
+    openshift_sdn_namespace: openshift-sdn               # Namespace to look for the openshift-sdn pods
+    watch_ovnkubernetes: False                           # Set to True for the cerberus to monitor ovn kubernetes components
+    ovn_namespace: openshift-ovn-kubernetes              # Namespace to look for the OVNKubernetes pods
+    cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
+tunings:
+    iterations: 5                                        # Iterations to loop before stopping the watch, it will be replaced with infinity when the daemon mode is enabled
+    sleep_time: 60                                       # Sleep duration between each iteration
+    daemon_mode: True                                    # Iterations are set to infinity which means that the cerberus will monitor the resources forever
+

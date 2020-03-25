@@ -6,12 +6,15 @@ import sys
 
 # Start a simple http server to publish the cerberus status file content
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    requests_served = 0
 
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
         f = open('/tmp/cerberus_status', 'rb')
         self.wfile.write(f.read())
+        SimpleHTTPRequestHandler.requests_served = \
+            SimpleHTTPRequestHandler.requests_served + 1
 
 
 def start_server(address):
