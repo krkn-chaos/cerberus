@@ -14,32 +14,23 @@ $ pip3 install -r requirements.txt
 ### Usage
 
 #### Config
-Set the supported components to monitor and the tunings like number of iterations to monitor and duration to wait between each check in the config file located at config/config.ini. A sample config looks like:
+Set the supported components to monitor and the tunings like number of iterations to monitor and duration to wait between each check in the config file located at config/config.yaml. A sample config looks like:
 
 ```
 cerberus:
     kubeconfig_path: ~/.kube/config                      # Path to kubeconfig
     watch_nodes: True                                    # Set to True for the cerberus to monitor the cluster nodes
-    watch_etcd: True                                     # Set to True for the cerberus to monitor the etcd members
-    etcd_namespace: openshift-etcd                       # Namespace to look for the etcd member pods
-    watch_openshift_apiserver: True                      # Set to True for the cerberus to monitor openshift-apiserver pods
-    openshift_apiserver_namespace: openshift-apiserver   # Namespace to look for the openshift-apiserver pods
-    watch_kube_apiserver: True                           # Set to True for the cerberus to monitor openshift-apiserver pods
-    kube_apiserver_namespace: openshift-kube-apiserver   # Namespace to look for the kube-apiserver pods
-    watch_monitoring_stack: True                         # Set to True for the cerberus to monitor prometheus/monitoring stack pods
-    monitoring_stack_namespace: openshift-monitoring     # Namespace to look for the monitoring stack pods
-    watch_kube_controller: True                          # Set to True for the cerberus to monitor kube-controller
-    kube_controller_namespace: openshift-kube-controller # Namespace to look for the kube controller pods
-    watch_machine_api_components: True                   # Set to True for the cerberus to monitor machine api components
-    machine_api_namespace: openshift-machine-api         # Namespace to look for the Machine API components
-    watch_kube_scheduler: True                           # Set to True for the cerberus to monitor kube-scheduler
-    kube_scheduler_namespace: openshift-kube-scheduler   # Namespace to look for the kube scheduler pods
-    watch_openshift_ingress: True                        # Set to True for the cerberus to monitor openshift-ingress
-    openshift_ingress_namespace: openshift-ingress       # Namespace to look for the openshift ingress pods
-    watch_openshift_sdn: True                            # Set to True for the cerberus to monitor openshift-sdn
-    openshift_sdn_namespace: openshift-sdn               # Namespace to look for the openshift-sdn pods
-    watch_ovnkubernetes: False                           # Set to True for the cerberus to monitor ovn kubernetes components
-    ovn_namespace: openshift-ovn-kubernetes              # Namespace to look for the OVNKubernetes pods
+    watch_namespaces:                                    # List of namespaces to be monitored
+        -    openshift-etcd
+        -    openshift-apiserver
+        -    openshift-kube-apiserver
+        -    openshift-monitoring
+        -    openshift-kube-controller
+        -    openshift-machine-api
+        -    openshift-kube-scheduler
+        -    openshift-ingress
+        -    openshift-sdn
+        -    openshift-ovn-kubernetes
     cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
 tunings:
     iterations: 5                                        # Iterations to loop before stopping the watch, it will be replaced with infinity when the daemon mode is enabled
@@ -122,7 +113,7 @@ The report is generated in the run directory and it contains the information abo
 When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://0.0.0.0:8080 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly.
 
 #### Usecase
-There can be number of usecases, here is one of them:
+There can be number of usecases, here are some of them:
 - We run tools to push the limits of Kubenetes/OpenShift to look at the performance and scalability and there are number of instances where the system components or nodes starts to degrade in which case the results are no longer valid but the workload generator continues to push the cluster till it breaks. The signal published by the Cerberus can be consumed by the workload generators to act on i.e stop the workload and notify us in this case.
 
 - When running chaos experiments on a kubernetes/OpenShift cluster, they can potentially break the components unrelated to the targeted components which means that the choas experiment won't be able to find it. The go/no-go signal can be used here to decide whether the cluster recovered from the failure injection as well as to decide whether to continue with the next chaos scenario.

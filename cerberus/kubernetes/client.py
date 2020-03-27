@@ -45,7 +45,11 @@ def monitor_nodes():
         except ApiException as e:
             logging.error("Exception when calling \
                            CoreV1Api->read_node_status: %s\n" % e)
-        node_status = node_info.status.conditions[-1].status
+        for condition in node_info.status.conditions:
+            if condition.type == "Ready":
+                node_status = condition.status
+            else:
+                continue
         if node_status != "True":
             notready_nodes.append(node)
     if len(notready_nodes) != 0:
