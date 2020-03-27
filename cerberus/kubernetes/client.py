@@ -77,3 +77,12 @@ def monitor_namespace(namespace):
     else:
         status = True
     return status, notready_pods
+
+
+# Monitor component namespace
+def monitor_component(iteration, component_namespace):
+    watch_component_status, failed_component_pods = \
+        monitor_namespace(component_namespace)
+    logging.info("Iteration %s: %s: %s"
+                 % (iteration, component_namespace, watch_component_status))
+    return watch_component_status, failed_component_pods
