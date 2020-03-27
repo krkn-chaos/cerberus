@@ -31,6 +31,7 @@ def main(cfg):
             config["cerberus"]["cerberus_publish_status"]
         watch_namespaces = config["cerberus"]["watch_namespaces"]
         kubeconfig_path = config["cerberus"]["kubeconfig_path"]
+        inspect_components = config["cerberus"]["inspect_components"]
         iterations = config["tunings"]["iterations"]
         sleep_time = config["tunings"]["sleep_time"]
         daemon_mode = config["tunings"]["daemon_mode"]
@@ -57,6 +58,13 @@ def main(cfg):
             logging.info("Publishing cerberus status at http://%s:%s"
                          % (server_address, port))
             server.start_server(address)
+
+        # Remove 'inspect_data' directory if it exists.
+        # 'inspect_data' directory is used to collect
+        # logs, events and metrics of the failed component
+        if os.path.isdir("inspect_data/"):
+            logging.info("Deleting existing inspect_data directory")
+            runcommand.invoke("rm -R inspect_data")
 
         # Initialize the start iteration to 0
         iteration = 0
@@ -118,6 +126,18 @@ def main(cfg):
                 logging.info("Failed pods and components")
                 for namespace, failures in failed_pods_components.items():
                     logging.info("%s: %s", namespace, failures)
+
+            if inspect_components:
+                for namespace in failed_pods_components.keys():
+                    dir_name = "inspect_data/" + namespace + "-logs"
+                    if os.path.isdir(dir_name):
+                        runcommand.invoke("rm -R " + dir_name)
+                        logging.info("Deleted existing %s directory"
+                                     % (dir_name))
+                    command_out = runcommand.invoke("oc adm inspect ns"
+                                                    "/" + namespace + " --dest"
+                                                    "-dir=" + dir_name)
+                    logging.info(command_out)
 
             if cerberus_publish_status:
                 publish_cerberus_status(cerberus_status)
