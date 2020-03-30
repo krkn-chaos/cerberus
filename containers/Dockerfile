@@ -20,4 +20,4 @@ pip3 install -r requirements.txt
 
 WORKDIR /root/cerberus
 
-ENTRYPOINT python3 start_cerberus.py --config=config/config.ini
+ENTRYPOINT python3 start_cerberus.py --config=config/config.yaml

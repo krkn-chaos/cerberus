@@ -52,7 +52,7 @@ Assuming that the latest docker ( 17.05 or greater with multi-build support ) is
 ```
 $ cd containers
 $ docker pull quay.io/openshift-scale/cerberus
-$ docker run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config -v <path_to_cerberus_config>:/root/cerberus/config/config.ini -d cerberus:latest
+$ docker run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config -v <path_to_cerberus_config>:/root/cerberus/config/config.yaml -d quay.io/openshift-scale/cerberus:latest
 $ docker logs -f cerberus
 ```
 
@@ -60,7 +60,7 @@ Similarly, podman can be used to achieve the same:
 ```
 $ cd containers
 $ podman pull quay.io/openshift-scale/cerberus
-$ podman run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config:Z -v <path_to_cerberus_config>:/root/cerberus/config/config.ini:Z -d cerberus:latest
+$ podman run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config:Z -v <path_to_cerberus_config>:/root/cerberus/config/config.yaml:Z -d quay.io/openshift-scale/cerberus:latest
 $ podman logs -f cerberus
 ```
 The go/no-go signal ( True or False ) gets published at http://<hostname>:8080. Note that the cerberus will only support ipv4 for the time being.
