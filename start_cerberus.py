@@ -7,6 +7,7 @@ import optparse
 import logging
 import yaml
 import cerberus.kubernetes.client as kubecli
+import cerberus.slack.slack_client as slackcli
 import cerberus.invoke.command as runcommand
 import cerberus.server.server as server
 
@@ -32,6 +33,7 @@ def main(cfg):
         watch_namespaces = config["cerberus"]["watch_namespaces"]
         kubeconfig_path = config["cerberus"]["kubeconfig_path"]
         inspect_components = config["cerberus"]["inspect_components"]
+        slack_integration = config["cerberus"]["slack_integration"]
         iterations = config["tunings"]["iterations"]
         sleep_time = config["tunings"]["sleep_time"]
         daemon_mode = config["tunings"]["daemon_mode"]
@@ -45,8 +47,8 @@ def main(cfg):
         # Cluster info
         logging.info("Fetching cluster info")
         cluster_version = runcommand.invoke("kubectl get clusterversion")
-        cluster_info = runcommand.invoke("kubectl cluster-info | awk 'NR==1'")
-        print("%s %s" % (cluster_version, cluster_info))
+        cluster_info = runcommand.invoke("kubectl cluster-info | awk 'NR==1' | sed -r 's/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g'")
+        logging.info("\n%s%s" % (cluster_version, cluster_info))
 
         # Run http server using a separate thread
         # if cerberus is asked to publish the status.
@@ -58,6 +60,16 @@ def main(cfg):
             logging.info("Publishing cerberus status at http://%s:%s"
                          % (server_address, port))
             server.start_server(address)
+
+        # Create slack WebCleint when slack intergation has been enabled
+        if slack_integration:
+            try:
+                slackcli.initialize_slack_client()
+            except Exception as e:
+                slack_integration = False
+                logging.error("Couldn't create slack WebClient. Check if slack env "
+                              "varaibles are set. Exception: %s" % (e))
+                logging.info("Slack integration has been disabled.")
 
         # Remove 'inspect_data' directory if it exists.
         # 'inspect_data' directory is used to collect
@@ -78,6 +90,10 @@ def main(cfg):
             iterations = float('inf')
         else:
             iterations = int(iterations)
+
+        if slack_integration:
+            slackcli.post_message_in_slack("Cerberus has started monitoring! :skull_and_crossbones:"
+                                           " %s" % (cluster_info))
 
         # Loop to run the components status checks starts here
         while (int(iteration) < iterations):
@@ -126,24 +142,30 @@ def main(cfg):
                 logging.info("Failed pods and components")
                 for namespace, failures in failed_pods_components.items():
                     logging.info("%s: %s", namespace, failures)
+                if slack_integration:
+                    failed_namespaces = ", ".join(list(failed_pods_components.keys()))
+                    slackcli.post_message_in_slack("%sIn iteration %d, Cerberus found issues in "
+                                                   "namespaces: %s. Hence, setting the go/no-go "
+                                                   "signal to false. Have a look at the report "
+                                                   "below!" % (cluster_info, iteration,
+                                                               failed_namespaces))
+                    slackcli.post_file_in_slack()
 
             if inspect_components:
                 for namespace in failed_pods_components.keys():
                     dir_name = "inspect_data/" + namespace + "-logs"
                     if os.path.isdir(dir_name):
                         runcommand.invoke("rm -R " + dir_name)
-                        logging.info("Deleted existing %s directory"
-                                     % (dir_name))
-                    command_out = runcommand.invoke("oc adm inspect ns"
-                                                    "/" + namespace + " --dest"
+                        logging.info("Deleted existing %s directory" % (dir_name))
+                    command_out = runcommand.invoke("oc adm inspect ns/" + namespace + " --dest"
                                                     "-dir=" + dir_name)
                     logging.info(command_out)
 
             if cerberus_publish_status:
                 publish_cerberus_status(cerberus_status)
         else:
-            logging.info("Completed watching for the specified number of "
-                         "iterations: %s" % (iterations))
+            logging.info("Completed watching for the specified number of iterations: %s"
+                         % (iterations))
     else:
         logging.error("Could not find a config at %s, please check" % (cfg))
         sys.exit(1)
