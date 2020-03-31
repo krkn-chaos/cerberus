@@ -34,6 +34,7 @@ cerberus:
     cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
     inspect_components: False                            # Enable it only when OpenShift client is supported to run.
                                                          # When enabled, cerberus collects logs, events and metrics of failed components
+    slack_integration: False                             # When enabled, cerberus reports status of each iteration in slack channel
 
 tunings:
     iterations: 5                                        # Iterations to loop before stopping the watch, it will be replaced with infinity when the daemon mode is enabled
@@ -111,6 +112,13 @@ The report is generated in the run directory and it contains the information abo
 +--------------------------------------------------Failed Components--------------------------------------------------+
 2020-03-26 22:05:37,123 [INFO] Failed openshfit sdn components: ['sdn-xmqhd']
 ```
+
+#### Slack integration
+The user has the option to enable/disable the slack integration. To use the slack integration, the user has to first create an [app](https://api.slack.com/apps?new_granular_bot_app=1) and add a bot to it on slack. Two env variables SLACK_API_TOKEN and SLACK_CHANNEL have to be set. SLACK_API_TOKEN refers to Bot User OAuth Access Token and SLACK_CHANNEL refers to the slack channel the user wishes to receive the notifications in. When enabled, cerberus reports the following on slack:
+- Notifies the start of cerberus monitoring.
+- Notifies the status of each iteration.
+- Sends the cerberus report at the end of an iteration in case of a failure.
+- Sends the cerberus report after completion of specified number of iterations set by the user.
 
 #### Go or no-go signal
 When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://0.0.0.0:8080 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly.
