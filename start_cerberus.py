@@ -47,7 +47,8 @@ def main(cfg):
         # Cluster info
         logging.info("Fetching cluster info")
         cluster_version = runcommand.invoke("kubectl get clusterversion")
-        cluster_info = runcommand.invoke("kubectl cluster-info | awk 'NR==1' | sed -r 's/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g'")
+        cluster_info = runcommand.invoke("kubectl cluster-info | awk 'NR==1' | sed -r "
+                                         "'s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g'") # noqa
         logging.info("\n%s%s" % (cluster_version, cluster_info))
 
         # Run http server using a separate thread
@@ -91,14 +92,24 @@ def main(cfg):
         else:
             iterations = int(iterations)
 
-        if slack_integration:
-            slackcli.post_message_in_slack("Cerberus has started monitoring! :skull_and_crossbones:"
-                                           " %s" % (cluster_info))
-
         # Loop to run the components status checks starts here
         while (int(iteration) < iterations):
             iteration += 1
             print("\n")
+
+            if slack_integration:
+                weekday = runcommand.invoke("date '+%A'")[:-1]
+                cop_slack_member_ID = config['cop_slack_ID'][weekday]
+                valid_cops = slackcli.get_channel_members()['members']
+
+                if iteration == 1:
+                    if cop_slack_member_ID in valid_cops:
+                        slack_tag = "Hi <@" + cop_slack_member_ID + ">! The cop " \
+                                    "for " + weekday + "!\n"
+                    else:
+                        slack_tag = "@here "
+                    slackcli.post_message_in_slack(slack_tag + "Cerberus has started monitoring! "
+                                                   ":skull_and_crossbones: %s" % (cluster_info))
 
             # Monitor nodes status
             if watch_nodes:
@@ -144,12 +155,23 @@ def main(cfg):
                     logging.info("%s: %s", namespace, failures)
                 if slack_integration:
                     failed_namespaces = ", ".join(list(failed_pods_components.keys()))
-                    slackcli.post_message_in_slack("%sIn iteration %d, Cerberus found issues in "
-                                                   "namespaces: %s. Hence, setting the go/no-go "
-                                                   "signal to false. Have a look at the report "
-                                                   "below!" % (cluster_info, iteration,
-                                                               failed_namespaces))
-                    slackcli.post_file_in_slack()
+                    valid_cops = slackcli.get_channel_members()['members']
+                    cerberus_report_path = runcommand.invoke("pwd | tr -d '\n'")
+                    if cop_slack_member_ID in valid_cops:
+                        # If the cop assigned is a member of the slack channel, tag the cop
+                        # while reporting every failure
+                        slack_tag = "<@" + cop_slack_member_ID + ">"
+                    else:
+                        # If a cop isn't assigned for the day, tag everyone by using @here
+                        # while reporting every failure
+                        slack_tag = "@here"
+                    slackcli.post_message_in_slack(slack_tag + " %sIn iteration %d, cerberus "
+                                                   "found issues in namespaces: *%s*. Hence, "
+                                                   "setting the go/no-go signal to false. The "
+                                                   "full report is at *%s* on the host cerberus "
+                                                   "is running."
+                                                   % (cluster_info, iteration,
+                                                      failed_namespaces, cerberus_report_path))
 
             if inspect_components:
                 for namespace in failed_pods_components.keys():
