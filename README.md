@@ -42,6 +42,7 @@ tunings:
     daemon_mode: True                                    # Iterations are set to infinity which means that the cerberus will monitor the resources forever
 
 ```
+NOTE: The current implementation can monitor only one cluster from one host. It can be used to monitor multiple clusters provided multiple instances of Cerberus are launched on different hosts.
 
 #### Run
 ```
@@ -123,7 +124,7 @@ The user has the option to enable/disable the slack integration. To use the slac
 #### Go or no-go signal
 When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://0.0.0.0:8080 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly.
 
-#### Usecase
+#### Use cases
 There can be number of usecases, here are some of them:
 - We run tools to push the limits of Kubenetes/OpenShift to look at the performance and scalability and there are number of instances where the system components or nodes starts to degrade in which case the results are no longer valid but the workload generator continues to push the cluster till it breaks. The signal published by the Cerberus can be consumed by the workload generators to act on i.e stop the workload and notify us in this case.
 
@@ -145,3 +146,5 @@ Kube Scheduler           | Watches Kube scheduler                               
 Ingress                  | Watches Routers                                                                                    | :heavy_check_mark:        |
 Openshift SDN            | Watches SDN pods                                                                                   | :heavy_check_mark:        |
 OVNKubernetes            | Watches OVN pods                                                                                   | :heavy_check_mark:        |
+
+NOTE: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned above by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
