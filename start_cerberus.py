@@ -10,7 +10,7 @@ import cerberus.kubernetes.client as kubecli
 import cerberus.slack.slack_client as slackcli
 import cerberus.invoke.command as runcommand
 import cerberus.server.server as server
-
+import pyfiglet 
 
 # Publish the cerberus status
 def publish_cerberus_status(status):
@@ -21,6 +21,7 @@ def publish_cerberus_status(status):
 # Main function
 def main(cfg):
     # Start cerberus
+    print(pyfiglet.figlet_format("cerberus"))
     logging.info("Starting ceberus")
 
     # Parse and read the config

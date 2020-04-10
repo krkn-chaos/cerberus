@@ -16,6 +16,7 @@ cerberus:
     inspect_components: False                            # Enable it only when OpenShift client is supported to run
                                                          # When enabled, cerberus collects logs, events and metrics of failed components
     slack_integration: False                             # When enabled, cerberus reports the failed iterations on a slack channel
+                                                         # SLACK_API_TOKEN ( Bot User OAuth Access Token ) and SLACK_CHANNEL ( channel to send notifications in case of failures )
 
 tunings:
     iterations: 5                                        # Iterations to loop before stopping the watch, it will be replaced with infinity when the daemon mode is enabled
