@@ -10,7 +10,8 @@ import cerberus.kubernetes.client as kubecli
 import cerberus.slack.slack_client as slackcli
 import cerberus.invoke.command as runcommand
 import cerberus.server.server as server
-import pyfiglet 
+import pyfiglet
+
 
 # Publish the cerberus status
 def publish_cerberus_status(status):
@@ -44,6 +45,9 @@ def main(cfg):
             kubeconfig_path = None
         logging.info("Initializing client to talk to the Kubernetes cluster")
         kubecli.initialize_clients(kubeconfig_path)
+        if "openshift-sdn" in watch_namespaces:
+            sdn_namespace = kubecli.check_sdn_namespace()
+            watch_namespaces = [w.replace('openshift-sdn', sdn_namespace) for w in watch_namespaces]
 
         # Cluster info
         logging.info("Fetching cluster info")
@@ -137,23 +141,19 @@ def main(cfg):
 
             # Check for the number of hits
             if cerberus_publish_status:
-                logging.info("HTTP requests served: %s "
+                logging.info("HTTP requests served: %s \n"
                              %
                              (server.SimpleHTTPRequestHandler.requests_served))
 
-            # Sleep for the specified duration
-            logging.info("Sleeping for the "
-                         "specified duration: %s" % (sleep_time))
-            time.sleep(float(sleep_time))
-
             # Logging the failed components
             if not watch_nodes_status:
-                logging.info("Failed nodes: %s \n" % (failed_nodes))
+                logging.info("Failed nodes")
+                logging.info("%s" % (failed_nodes))
 
             if not cerberus_status:
                 logging.info("Failed pods and components")
                 for namespace, failures in failed_pods_components.items():
-                    logging.info("%s: %s", namespace, failures)
+                    logging.info("%s: %s \n", namespace, failures)
                 if slack_integration:
                     failed_namespaces = ", ".join(list(failed_pods_components.keys()))
                     valid_cops = slackcli.get_channel_members()['members']
@@ -186,6 +186,12 @@ def main(cfg):
 
             if cerberus_publish_status:
                 publish_cerberus_status(cerberus_status)
+
+            # Sleep for the specified duration
+            logging.info("Sleeping for the "
+                         "specified duration: %s" % (sleep_time))
+            time.sleep(float(sleep_time))
+
         else:
             logging.info("Completed watching for the specified number of iterations: %s"
                          % (iterations))
@@ -197,7 +203,12 @@ def main(cfg):
 if __name__ == "__main__":
     # Initialize the parser to read the config
     parser = optparse.OptionParser()
-    parser.add_option("-c", "--config", dest="cfg", help="config location")
+    parser.add_option(
+        "-c", "--config",
+        dest="cfg",
+        help="config location",
+        default="config/config.yaml",
+    )
     (options, args) = parser.parse_args()
     logging.basicConfig(
         level=logging.INFO,
