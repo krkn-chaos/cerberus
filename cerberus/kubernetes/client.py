@@ -39,6 +39,7 @@ def list_pods(namespace):
 def monitor_nodes():
     nodes = list_nodes()
     notready_nodes = []
+    node_kerneldeadlock_status = False
     for node in nodes:
         try:
             node_info = cli.read_node_status(node, pretty=True)
@@ -46,17 +47,35 @@ def monitor_nodes():
             logging.error("Exception when calling \
                            CoreV1Api->read_node_status: %s\n" % e)
         for condition in node_info.status.conditions:
-            if condition.type == "Ready":
-                node_status = condition.status
+            if condition.type == "KernelDeadlock":
+                node_kerneldeadlock_status = condition.status
+            elif condition.type == "Ready":
+                node_ready_status = condition.status
             else:
                 continue
-        if node_status != "True":
+        if (
+            node_kerneldeadlock_status != "False"        # noqa
+            or node_ready_status != "True"               # noqa
+        ):
             notready_nodes.append(node)
     if len(notready_nodes) != 0:
         status = False
     else:
         status = True
     return status, notready_nodes
+
+
+# Check the namespace name for default SDN
+def check_sdn_namespace():
+    for item in cli.list_namespace().items:
+        if item.metadata.name == "openshift-ovn-kubernetes":
+            return "openshift-ovn-kubernetes"
+        elif item.metadata.name == "openshift-sdn":
+            return "openshift-sdn"
+        else:
+            continue
+    logging.error("Could not find openshift-sdn and openshift-ovn-kubernetes namespaces, \
+        please specify the correct networking namespace in config file")
 
 
 # Monitor the status of the pods in the specified namespace

@@ -30,7 +30,6 @@ cerberus:
         -    openshift-kube-scheduler
         -    openshift-ingress
         -    openshift-sdn
-        -    openshift-ovn-kubernetes
     cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
     inspect_components: False                            # Enable it only when OpenShift client is supported to run.
                                                          # When enabled, cerberus collects logs, events and metrics of failed components
@@ -99,7 +98,6 @@ The report is generated in the run directory and it contains the information abo
 2020-03-26 22:05:25,945 [INFO] Iteration 4: Kube scheduler status: True
 2020-03-26 22:05:25,963 [INFO] Iteration 4: OpenShift ingress status: True
 2020-03-26 22:05:26,077 [INFO] Iteration 4: OpenShift SDN status: True
-2020-03-26 22:05:26,077 [INFO] Cerberus is not monitoring openshift-ovn-kubernetes, assuming it's up and running
 2020-03-26 22:05:26,077 [INFO] HTTP requests served: 0 
 2020-03-26 22:05:26,077 [INFO] Sleeping for the specified duration: 5
 
@@ -115,7 +113,6 @@ The report is generated in the run directory and it contains the information abo
 2020-03-26 22:05:31,989 [INFO] Iteration 5: Kube scheduler status: True
 2020-03-26 22:05:32,007 [INFO] Iteration 5: OpenShift ingress status: True
 2020-03-26 22:05:32,118 [INFO] Iteration 5: OpenShift SDN status: False
-2020-03-26 22:05:32,118 [INFO] Cerberus is not monitoring openshift-ovn-kubernetes, assuming it's up and running 
 2020-03-26 22:05:32,118 [INFO] HTTP requests served: 1 
 2020-03-26 22:05:32,118 [INFO] Sleeping for the specified duration: 5
 +--------------------------------------------------Failed Components--------------------------------------------------+
@@ -130,6 +127,22 @@ The user has the option to enable/disable the slack integration ( disabled by de
 
 #### Go or no-go signal
 When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://0.0.0.0:8080 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly.
+
+#### Node Problem Detector
+[node-problem-detector](https://github.com/kubernetes/node-problem-detector) aims to make various node problems visible to the upstream layers in cluster management stack
+##### Installation
+1. Create `openshift-node-problem-detector` namespace [ns.yaml](https://github.com/openshift/node-problem-detector-operator/blob/master/deploy/ns.yaml) with        `oc create -f ns.yaml`
+2. Add cluster role with `oc adm policy add-cluster-role-to-user system:node-problem-detector -z default -n openshift-node-problem-detector`
+3. Add security context constraints with `oc adm policy add-scc-to-user privileged system:serviceaccount:openshift-node-problem-detector:default
+`
+4. Edit [node-problem-detector.yaml](https://github.com/kubernetes/node-problem-detector/blob/master/deployment/node-problem-detector.yaml) to fit your environment.
+5. Edit [node-problem-detector-config.yaml](https://github.com/kubernetes/node-problem-detector/blob/master/deployment/node-problem-detector-config.yaml) to configure node-problem-detector.
+6. Create the ConfigMap with	`oc create -f node-problem-detector-config.yaml`
+7. Create the DaemonSet with `oc create -f node-problem-detector.yaml`
+
+Once installed you will see node-problem-detector pods in openshift-node-problem-detector namespace. 
+Now enable openshift-node-problem-detector in the [config.yaml](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml).
+Cerberus just monitors `KernelDeadlock` condition provided by the node problem detector as it is system critical and can hinder node performance.
 
 #### Use cases
 There can be number of usecases, here are some of them:
@@ -155,3 +168,4 @@ Openshift SDN            | Watches SDN pods                                     
 OVNKubernetes            | Watches OVN pods                                                                                   | :heavy_check_mark:        |
 
 NOTE: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned above by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
+
