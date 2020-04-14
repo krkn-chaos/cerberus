@@ -11,7 +11,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        f = open('/tmp/cerberus_status', 'rb')
+        f = open('/tmp/cerberus_status.json', 'rb')
         self.wfile.write(f.read())
         SimpleHTTPRequestHandler.requests_served = \
             SimpleHTTPRequestHandler.requests_served + 1

@@ -6,6 +6,7 @@ import time
 import optparse
 import logging
 import yaml
+import json
 import cerberus.kubernetes.client as kubecli
 import cerberus.slack.slack_client as slackcli
 import cerberus.invoke.command as runcommand
@@ -14,8 +15,8 @@ import pyfiglet
 
 # Publish the cerberus status
 def publish_cerberus_status(status):
-    with open('/tmp/cerberus_status', 'w+') as file:
-        file.write(str(status))
+    with open('/tmp/cerberus_status.json', 'w+') as file:
+        json.dump({'cerberus_status': str(status)}, file)
 
 
 # Main function
@@ -100,7 +101,7 @@ def main(cfg):
 
             if slack_integration:
                 weekday = runcommand.invoke("date '+%A'")[:-1]
-                cop_slack_member_ID = config['cop_slack_ID'][weekday]
+                cop_slack_member_ID = config["cerberus"]['cop_slack_ID'][weekday]
                 valid_cops = slackcli.get_channel_members()['members']
 
                 if iteration == 1:
