@@ -104,15 +104,21 @@ def main(cfg):
 
             if slack_integration:
                 weekday = runcommand.invoke("date '+%A'")[:-1]
-                cop_slack_member_ID = config['cop_slack_ID'][weekday]
+                cop_slack_member_ID = config["cerberus"]["cop_slack_ID"][weekday]
                 valid_cops = slackcli.get_channel_members()['members']
+                slack_team_alias = config["cerberus"]["slack_team_alias"]
+
+                if cop_slack_member_ID in valid_cops:
+                    slack_tag = "<@" + cop_slack_member_ID + ">"
+                elif slack_team_alias:
+                    slack_tag = "@" + slack_team_alias + " "
+                else:
+                    slack_tag = ""
 
                 if iteration == 1:
                     if cop_slack_member_ID in valid_cops:
-                        slack_tag = "Hi <@" + cop_slack_member_ID + ">! The cop " \
+                        slack_tag = "Hi " + slack_tag + "! The cop " \
                                     "for " + weekday + "!\n"
-                    else:
-                        slack_tag = "@here "
                     slackcli.post_message_in_slack(slack_tag + "Cerberus has started monitoring! "
                                                    ":skull_and_crossbones: %s" % (cluster_info))
 
@@ -158,14 +164,6 @@ def main(cfg):
                     failed_namespaces = ", ".join(list(failed_pods_components.keys()))
                     valid_cops = slackcli.get_channel_members()['members']
                     cerberus_report_path = runcommand.invoke("pwd | tr -d '\n'")
-                    if cop_slack_member_ID in valid_cops:
-                        # If the cop assigned is a member of the slack channel, tag the cop
-                        # while reporting every failure
-                        slack_tag = "<@" + cop_slack_member_ID + ">"
-                    else:
-                        # If a cop isn't assigned for the day, tag everyone by using @here
-                        # while reporting every failure
-                        slack_tag = "@here"
                     slackcli.post_message_in_slack(slack_tag + " %sIn iteration %d, cerberus "
                                                    "found issues in namespaces: *%s*. Hence, "
                                                    "setting the go/no-go signal to false. The "

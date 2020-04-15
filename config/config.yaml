@@ -14,18 +14,20 @@ cerberus:
     cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
     inspect_components: False                            # Enable it only when OpenShift client is supported to run
                                                          # When enabled, cerberus collects logs, events and metrics of failed components
-    slack_integration: False                             # When enabled, cerberus reports the failed iterations on a slack channel
+    slack_integration: False                             # When enabled, cerberus reports the failed iterations in the slack channel
                                                          # SLACK_API_TOKEN ( Bot User OAuth Access Token ) and SLACK_CHANNEL ( channel to send notifications in case of failures )
+                                                         # When slack_integration is enabled, a cop can be assigned for each day. The cop of the day is tagged while reporting failures in the slack channel. Values are slack member ID's.
+    cop_slack_ID:                                        # (NOTE: Defining the cop id's is optional and when the cop slack id's are not defined, the slack_team_alias tag is used if it is set else no tag is used while reporting failures in the slack channel.)
+        Monday:
+        Tuesday:
+        Wednesday:
+        Thursday:
+        Friday:
+        Saturday:
+        Sunday:
+    slack_team_alias:                                    # The slack team alias to be tagged while reporting failures in the slack channel when no cop is assigned
 
 tunings:
     iterations: 5                                        # Iterations to loop before stopping the watch, it will be replaced with infinity when the daemon mode is enabled
     sleep_time: 60                                       # Sleep duration between each iteration
     daemon_mode: True                                    # Iterations are set to infinity which means that the cerberus will monitor the resources forever
-
-                                                         # When slack_integration is enabled, a cop can be assigned for each day. The cop of the day is tagged while reporting failures in a slack channel. Values are slack member ID's.
-cop_slack_ID:                                            # (Note: Defining the cop id's is optional and when the cop slack id's are not defined, the failure messages are sent to the slack channel with "@here" to tag everyone.)
-    Monday:
-    Tuesday:
-    Wednesday:
-    Thursday:
-    Friday:
