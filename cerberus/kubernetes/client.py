@@ -39,7 +39,7 @@ def list_pods(namespace):
 def monitor_nodes():
     nodes = list_nodes()
     notready_nodes = []
-    node_kerneldeadlock_status = False
+    node_kerneldeadlock_status = "False"
     for node in nodes:
         try:
             node_info = cli.read_node_status(node, pretty=True)
