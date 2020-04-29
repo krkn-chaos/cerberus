@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 
-import sys
 import os
+import sys
 import time
-import optparse
-import logging
 import yaml
+import logging
+import optparse
+import pyfiglet
+import cerberus.server.server as server
+import cerberus.inspect.inspect as inspect
+import cerberus.invoke.command as runcommand
 import cerberus.kubernetes.client as kubecli
 import cerberus.slack.slack_client as slackcli
-import cerberus.invoke.command as runcommand
-import cerberus.server.server as server
-import pyfiglet
 
 
 # Publish the cerberus status
@@ -30,8 +31,7 @@ def main(cfg):
         with open(cfg, 'r') as f:
             config = yaml.full_load(f)
         watch_nodes = config["cerberus"]["watch_nodes"]
-        cerberus_publish_status = \
-            config["cerberus"]["cerberus_publish_status"]
+        cerberus_publish_status = config["cerberus"]["cerberus_publish_status"]
         watch_namespaces = config["cerberus"]["watch_namespaces"]
         kubeconfig_path = config["cerberus"]["kubeconfig_path"]
         inspect_components = config["cerberus"]["inspect_components"]
@@ -45,6 +45,7 @@ def main(cfg):
             kubeconfig_path = None
         logging.info("Initializing client to talk to the Kubernetes cluster")
         kubecli.initialize_clients(kubeconfig_path)
+
         if "openshift-sdn" in watch_namespaces:
             sdn_namespace = kubecli.check_sdn_namespace()
             watch_namespaces = [w.replace('openshift-sdn', sdn_namespace) for w in watch_namespaces]
@@ -56,9 +57,8 @@ def main(cfg):
                                          "'s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g'") # noqa
         logging.info("\n%s%s" % (cluster_version, cluster_info))
 
-        # Run http server using a separate thread
-        # if cerberus is asked to publish the status.
-        # It is served by the http server.
+        # Run http server using a separate thread if cerberus is asked
+        # to publish the status. It is served by the http server.
         if cerberus_publish_status:
             address = ("0.0.0.0", 8080)
             server_address = address[0]
@@ -69,27 +69,17 @@ def main(cfg):
 
         # Create slack WebCleint when slack intergation has been enabled
         if slack_integration:
-            try:
-                slackcli.initialize_slack_client()
-            except Exception as e:
-                slack_integration = False
-                logging.error("Couldn't create slack WebClient. Check if slack env "
-                              "varaibles are set. Exception: %s" % (e))
-                logging.info("Slack integration has been disabled.")
+            slack_integration = slackcli.initialize_slack_client()
 
-        # Remove 'inspect_data' directory if it exists.
-        # 'inspect_data' directory is used to collect
-        # logs, events and metrics of the failed component
-        if os.path.isdir("inspect_data/"):
-            logging.info("Deleting existing inspect_data directory")
-            runcommand.invoke("rm -R inspect_data")
+        if inspect_components:
+            logging.info("Detailed inspection of failed components has been enabled")
+            inspect.delete_inspect_directory()
 
         # Initialize the start iteration to 0
         iteration = 0
 
-        # Set the number of iterations to loop to infinity
-        # if daemon mode is enabled
-        # or else set it to the provided iterations count in the config
+        # Set the number of iterations to loop to infinity if daemon mode is
+        # enabled or else set it to the provided iterations count in the config
         if daemon_mode:
             logging.info("Daemon mode enabled, cerberus will monitor forever")
             logging.info("Ignoring the iterations set")
@@ -105,22 +95,11 @@ def main(cfg):
             if slack_integration:
                 weekday = runcommand.invoke("date '+%A'")[:-1]
                 cop_slack_member_ID = config["cerberus"]["cop_slack_ID"][weekday]
-                valid_cops = slackcli.get_channel_members()['members']
                 slack_team_alias = config["cerberus"]["slack_team_alias"]
-
-                if cop_slack_member_ID in valid_cops:
-                    slack_tag = "<@" + cop_slack_member_ID + ">"
-                elif slack_team_alias:
-                    slack_tag = "@" + slack_team_alias + " "
-                else:
-                    slack_tag = ""
+                slackcli.slack_tagging(cop_slack_member_ID, slack_team_alias)
 
                 if iteration == 1:
-                    if cop_slack_member_ID in valid_cops:
-                        slack_tag = "Hi " + slack_tag + "! The cop " \
-                                    "for " + weekday + "!\n"
-                    slackcli.post_message_in_slack(slack_tag + "Cerberus has started monitoring! "
-                                                   ":skull_and_crossbones: %s" % (cluster_info))
+                    slackcli.slack_report_cerberus_start(cluster_info, weekday, cop_slack_member_ID)
 
             # Monitor nodes status
             if watch_nodes:
@@ -128,66 +107,51 @@ def main(cfg):
                 logging.info("Iteration %s: Node status: %s"
                              % (iteration, watch_nodes_status))
             else:
-                logging.info("Cerberus is not monitoring nodes, "
-                             "so setting the status to True and "
-                             "assuming that the nodes are ready")
+                logging.info("Cerberus is not monitoring nodes, so setting the status "
+                             "to True and assuming that the nodes are ready")
                 watch_nodes_status = True
 
             # Monitor each component in the namespace
-            # Set the initial cerberus_status
             failed_pods_components = {}
-            cerberus_status = True
+            watch_namespaces_status = True
 
             for namespace in watch_namespaces:
                 watch_component_status, failed_component_pods = \
                     kubecli.monitor_component(iteration, namespace)
-                cerberus_status = cerberus_status and watch_component_status
+                watch_namespaces_status = watch_namespaces_status and watch_component_status
                 if not watch_component_status:
                     failed_pods_components[namespace] = failed_component_pods
 
             # Check for the number of hits
             if cerberus_publish_status:
                 logging.info("HTTP requests served: %s \n"
-                             %
-                             (server.SimpleHTTPRequestHandler.requests_served))
+                             % (server.SimpleHTTPRequestHandler.requests_served))
 
             # Logging the failed components
             if not watch_nodes_status:
                 logging.info("Failed nodes")
                 logging.info("%s" % (failed_nodes))
 
-            if not cerberus_status:
-                logging.info("Failed pods and components")
-                for namespace, failures in failed_pods_components.items():
-                    logging.info("%s: %s \n", namespace, failures)
+            if not watch_nodes_status or not watch_namespaces_status:
+                if not watch_namespaces_status:
+                    logging.info("Failed pods and components")
+                    for namespace, failures in failed_pods_components.items():
+                        logging.info("%s: %s", namespace, failures)
                 if slack_integration:
-                    failed_namespaces = ", ".join(list(failed_pods_components.keys()))
-                    valid_cops = slackcli.get_channel_members()['members']
-                    cerberus_report_path = runcommand.invoke("pwd | tr -d '\n'")
-                    slackcli.post_message_in_slack(slack_tag + " %sIn iteration %d, cerberus "
-                                                   "found issues in namespaces: *%s*. Hence, "
-                                                   "setting the go/no-go signal to false. The "
-                                                   "full report is at *%s* on the host cerberus "
-                                                   "is running."
-                                                   % (cluster_info, iteration,
-                                                      failed_namespaces, cerberus_report_path))
+                    slackcli.slack_logging(cluster_info, iteration, watch_nodes_status,
+                                           watch_namespaces_status, failed_nodes,
+                                           failed_pods_components)
 
             if inspect_components:
-                for namespace in failed_pods_components.keys():
-                    dir_name = "inspect_data/" + namespace + "-logs"
-                    if os.path.isdir(dir_name):
-                        runcommand.invoke("rm -R " + dir_name)
-                        logging.info("Deleted existing %s directory" % (dir_name))
-                    command_out = runcommand.invoke("oc adm inspect ns/" + namespace + " --dest"
-                                                    "-dir=" + dir_name)
-                    logging.info(command_out)
+                inspect.inspect_components(failed_pods_components)
+
+            cerberus_status = watch_nodes_status and watch_namespaces_status
 
             if cerberus_publish_status:
                 publish_cerberus_status(cerberus_status)
 
             # Sleep for the specified duration
-            logging.info("Sleeping for the "
-                         "specified duration: %s" % (sleep_time))
+            logging.info("Sleeping for the specified duration: %s" % (sleep_time))
             time.sleep(float(sleep_time))
 
         else:
