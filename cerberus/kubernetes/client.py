@@ -1,6 +1,7 @@
+import logging
+from collections import defaultdict
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
-import logging
 
 
 # Load kubeconfig and initialize kubernetes python client
@@ -82,7 +83,8 @@ def check_sdn_namespace():
 # and set the status to true or false
 def monitor_namespace(namespace):
     pods = list_pods(namespace)
-    notready_pods = []
+    notready_pods = set()
+    notready_containers = defaultdict(list)
     for pod in pods:
         try:
             pod_info = cli.read_namespaced_pod_status(pod, namespace,
@@ -90,22 +92,36 @@ def monitor_namespace(namespace):
         except ApiException as e:
             logging.error("Exception when calling \
                            CoreV1Api->read_namespaced_pod_status: %s\n" % e)
-        pod_status = pod_info.status.phase
-        if pod_status != "Running" \
-            and pod_status != "Completed" \
-            and pod_status != "Succeeded":
-            notready_pods.append(pod)
-    if len(notready_pods) != 0:
+        pod_status = pod_info.status
+        pod_status_phase = pod_status.phase
+        if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
+            notready_pods.add(pod)
+        if pod_status_phase != "Succeeded":
+            if pod_status.conditions:
+                for condition in pod_status.conditions:
+                    if condition.type == "Ready" and condition.status == "False":
+                        notready_pods.add(pod)
+                    if condition.type == "ContainersReady" and condition.status == "False":
+                        if pod_status.container_statuses:
+                            for container in pod_status.container_statuses:
+                                if not container.ready:
+                                    notready_containers[pod].append(container.name)
+                        if pod_status.init_container_statuses:
+                            for container in pod_status.init_container_statuses:
+                                if not container.ready:
+                                    notready_containers[pod].append(container.name)
+    notready_pods = list(notready_pods)
+    if len(notready_pods) != 0 or len(notready_containers) != 0:
         status = False
     else:
         status = True
-    return status, notready_pods
+    return status, notready_pods, notready_containers
 
 
 # Monitor component namespace
 def monitor_component(iteration, component_namespace):
-    watch_component_status, failed_component_pods = \
+    watch_component_status, failed_component_pods, failed_containers = \
         monitor_namespace(component_namespace)
     logging.info("Iteration %s: %s: %s"
                  % (iteration, component_namespace, watch_component_status))
-    return watch_component_status, failed_component_pods
+    return watch_component_status, failed_component_pods, failed_containers
