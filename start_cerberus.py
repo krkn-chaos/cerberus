@@ -113,14 +113,16 @@ def main(cfg):
 
             # Monitor each component in the namespace
             failed_pods_components = {}
+            failed_pod_containers = {}
             watch_namespaces_status = True
 
             for namespace in watch_namespaces:
-                watch_component_status, failed_component_pods = \
+                watch_component_status, failed_component_pods, failed_containers = \
                     kubecli.monitor_component(iteration, namespace)
                 watch_namespaces_status = watch_namespaces_status and watch_component_status
                 if not watch_component_status:
                     failed_pods_components[namespace] = failed_component_pods
+                    failed_pod_containers[namespace] = failed_containers
 
             # Check for the number of hits
             if cerberus_publish_status:
@@ -137,6 +139,9 @@ def main(cfg):
                     logging.info("Failed pods and components")
                     for namespace, failures in failed_pods_components.items():
                         logging.info("%s: %s", namespace, failures)
+                        for pod, containers in failed_pod_containers[namespace].items():
+                            logging.info("Failed containers in %s: %s", pod, containers)
+
                 if slack_integration:
                     slackcli.slack_logging(cluster_info, iteration, watch_nodes_status,
                                            watch_namespaces_status, failed_nodes,
