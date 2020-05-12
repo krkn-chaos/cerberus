@@ -168,7 +168,8 @@ Ingress                  | Watches Routers                                      
 Openshift SDN            | Watches SDN pods                                                                                   | :heavy_check_mark:        |
 OVNKubernetes            | Watches OVN pods                                                                                   | :heavy_check_mark:        |
 Cluster Operators        | Watches all Cluster Operators                                                                      | :heavy_check_mark:        |
-Master Nodes Schedule    | Watches schedule of Master Nodes                                                                     | :heavy_check_mark:        |
+Master Nodes Schedule    | Watches schedule of Master Nodes                                                                   | :heavy_check_mark:        |
+Api Server               | Watches the api server availability                                                                | :heavy_check_mark:        |
 
 NOTE: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned above by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
 

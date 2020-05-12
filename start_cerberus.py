@@ -2,12 +2,12 @@
 
 import os
 import sys
-import time
 import yaml
 import logging
 import optparse
 import pyfiglet
 from collections import defaultdict
+import time
 import cerberus.server.server as server
 import cerberus.inspect.inspect as inspect
 import cerberus.invoke.command as runcommand
@@ -81,6 +81,13 @@ def main(cfg):
         # get list of all master nodes to verify scheduling
         master_nodes = kubecli.list_nodes("node-role.kubernetes.io/master")
 
+        # Use cluster_info to get the api server url
+        api_server_url = cluster_info.split(" ")[-1] + "/healthz"
+
+        # This can become a json structure to keep track of all the failures issue:58
+        # Counter for if api server is not ok
+        api_fail_count = 0
+
         # Initialize the start iteration to 0
         iteration = 0
 
@@ -97,12 +104,6 @@ def main(cfg):
         while (int(iteration) < iterations):
             iteration += 1
 
-            for node in master_nodes:
-                taint = kubecli.get_taint_from_describe(node)
-                if "none" in str(taint).lower() or "NoSchedule" not in str(taint):
-                    logging.info("Iteration %s: Master node %s has incorrect scheduling taint, "
-                                 "%s " % (iteration, node, str(taint)))
-
             if slack_integration:
                 weekday = runcommand.invoke("date '+%A'")[:-1]
                 cop_slack_member_ID = config["cerberus"]["cop_slack_ID"].get(weekday, None)
@@ -111,6 +112,17 @@ def main(cfg):
 
                 if iteration == 1:
                     slackcli.slack_report_cerberus_start(cluster_info, weekday, cop_slack_member_ID)
+
+            # Check if api server url is ok
+            server_status = kubecli.is_url_available(api_server_url)
+            if not server_status:
+                api_fail_count += 1
+
+            for node in master_nodes:
+                taint = kubecli.get_taint_from_describe(node)
+                if "none" in str(taint).lower() or "NoSchedule" not in str(taint):
+                    logging.info("Iteration %s: Master node %s has incorrect scheduling taint, "
+                                 "%s " % (iteration, node, str(taint)))
 
             # Monitor nodes status
             if watch_nodes:
@@ -168,6 +180,9 @@ def main(cfg):
                 logging.info("Iteration %s: Failed operators" % (iteration))
                 logging.info("%s\n" % (failed_operators))
 
+            if not server_status:
+                logging.info("Api Server is not healthy as reported by %s" % (api_server_url))
+
             if not watch_namespaces_status:
                 logging.info("Iteration %s: Failed pods and components" % (iteration))
                 for namespace, failures in failed_pods_components.items():
@@ -189,7 +204,7 @@ def main(cfg):
                 inspect.inspect_components(failed_pods_components)
 
             cerberus_status = watch_nodes_status and watch_namespaces_status \
-                and watch_cluster_operators_status
+                and watch_cluster_operators_status and server_status
 
             if cerberus_publish_status:
                 publish_cerberus_status(cerberus_status)

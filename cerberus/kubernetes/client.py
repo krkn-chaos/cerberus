@@ -4,7 +4,8 @@ from collections import defaultdict
 from kubernetes import client, config
 import cerberus.invoke.command as runcommand
 from kubernetes.client.rest import ApiException
-
+import requests
+from urllib3.exceptions import InsecureRequestWarning
 
 pods_tracker = defaultdict(dict)
 
@@ -190,3 +191,14 @@ def get_taint_from_describe(node_name):
     # Need to get the taint type and take out any extra spaces
     taint_info = node_taint.split(':')[-1].replace(" ", '')
     return taint_info
+
+
+# See if url is available
+def is_url_available(url):
+
+    requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+    response = requests.get(url, verify=False)
+    if response.status_code != 200:
+        return False
+    else:
+        return True
