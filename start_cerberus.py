@@ -31,6 +31,7 @@ def main(cfg):
         with open(cfg, 'r') as f:
             config = yaml.full_load(f)
         watch_nodes = config["cerberus"]["watch_nodes"]
+        watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", True)
         cerberus_publish_status = config["cerberus"]["cerberus_publish_status"]
         watch_namespaces = config["cerberus"]["watch_namespaces"]
         kubeconfig_path = config["cerberus"]["kubeconfig_path"]
@@ -111,6 +112,19 @@ def main(cfg):
                              "to True and assuming that the nodes are ready")
                 watch_nodes_status = True
 
+            # Monitor cluster operators status
+            if watch_cluster_operators:
+                status_yaml = kubecli.get_cluster_operators()
+                watch_cluster_operators_status, failed_operators = \
+                    kubecli.monitor_cluster_operator( status_yaml)
+                logging.info("Iteration %s: Cluster Operator status: %s"
+                             % (iteration, watch_cluster_operators_status))
+            else:
+                logging.info("Cerberus is not monitoring cluster operators, "
+                             "so setting the status to True and "
+                             "assuming that the cluster operators are ready")
+                watch_cluster_operators_status = True
+
             # Monitor each component in the namespace
             failed_pods_components = {}
             failed_pod_containers = {}
@@ -134,6 +148,10 @@ def main(cfg):
                 logging.info("Failed nodes")
                 logging.info("%s" % (failed_nodes))
 
+            if not watch_cluster_operators_status:
+                logging.info("Failed operators")
+                logging.info(failed_operators)
+
             if not watch_nodes_status or not watch_namespaces_status:
                 if not watch_namespaces_status:
                     logging.info("Failed pods and components")
@@ -150,7 +168,8 @@ def main(cfg):
             if inspect_components:
                 inspect.inspect_components(failed_pods_components)
 
-            cerberus_status = watch_nodes_status and watch_namespaces_status
+            cerberus_status = watch_nodes_status and watch_namespaces_status \
+                and watch_cluster_operators_status
 
             if cerberus_publish_status:
                 publish_cerberus_status(cerberus_status)

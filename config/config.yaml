@@ -1,6 +1,7 @@
 cerberus:
     kubeconfig_path: ~/.kube/config                      # Path to kubeconfig
     watch_nodes: True                                    # Set to True for the cerberus to monitor the cluster nodes
+    watch_cluster_operators: True                        # Set to True for cerberus to monitor cluster operators
     watch_namespaces:                                    # List of namespaces to be monitored
         -    openshift-etcd
         -    openshift-apiserver

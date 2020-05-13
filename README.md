@@ -20,6 +20,7 @@ Set the supported components to monitor and the tunings like number of iteration
 cerberus:
     kubeconfig_path: ~/.kube/config                      # Path to kubeconfig
     watch_nodes: True                                    # Set to True for the cerberus to monitor the cluster nodes
+    watch_cluster_operators: True                        # Set to True for cerberus to monitor cluster operators. Parameter is optional, will set to True if not specified
     watch_namespaces:                                    # List of namespaces to be monitored
         -    openshift-etcd
         -    openshift-apiserver
@@ -166,6 +167,7 @@ Kube Scheduler           | Watches Kube scheduler                               
 Ingress                  | Watches Routers                                                                                    | :heavy_check_mark:        |
 Openshift SDN            | Watches SDN pods                                                                                   | :heavy_check_mark:        |
 OVNKubernetes            | Watches OVN pods                                                                                   | :heavy_check_mark:        |
+Cluster Operators        | Watches all Cluster Operators                                                                      | :heavy_check_mark:        |
 
 NOTE: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned above by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
 
