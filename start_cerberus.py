@@ -7,6 +7,7 @@ import yaml
 import logging
 import optparse
 import pyfiglet
+from collections import defaultdict
 import cerberus.server.server as server
 import cerberus.inspect.inspect as inspect
 import cerberus.invoke.command as runcommand
@@ -91,7 +92,6 @@ def main(cfg):
         # Loop to run the components status checks starts here
         while (int(iteration) < iterations):
             iteration += 1
-            print("\n")
 
             if slack_integration:
                 weekday = runcommand.invoke("date '+%A'")[:-1]
@@ -116,7 +116,7 @@ def main(cfg):
             if watch_cluster_operators:
                 status_yaml = kubecli.get_cluster_operators()
                 watch_cluster_operators_status, failed_operators = \
-                    kubecli.monitor_cluster_operator( status_yaml)
+                    kubecli.monitor_cluster_operator(status_yaml)
                 logging.info("Iteration %s: Cluster Operator status: %s"
                              % (iteration, watch_cluster_operators_status))
             else:
@@ -125,14 +125,20 @@ def main(cfg):
                              "assuming that the cluster operators are ready")
                 watch_cluster_operators_status = True
 
-            # Monitor each component in the namespace
+            if iteration == 1:
+                for namespace in watch_namespaces:
+                    kubecli.namespace_sleep_tracker(namespace)
+
             failed_pods_components = {}
             failed_pod_containers = {}
             watch_namespaces_status = True
 
+            # Monitor each component in the namespace
             for namespace in watch_namespaces:
                 watch_component_status, failed_component_pods, failed_containers = \
-                    kubecli.monitor_component(iteration, namespace)
+                    kubecli.monitor_namespace(namespace)
+                logging.info("Iteration %s: %s: %s"
+                             % (iteration, namespace, watch_component_status))
                 watch_namespaces_status = watch_namespaces_status and watch_component_status
                 if not watch_component_status:
                     failed_pods_components[namespace] = failed_component_pods
@@ -145,20 +151,21 @@ def main(cfg):
 
             # Logging the failed components
             if not watch_nodes_status:
-                logging.info("Failed nodes")
+                logging.info("Iteration %s: Failed nodes" % (iteration))
                 logging.info("%s" % (failed_nodes))
 
             if not watch_cluster_operators_status:
-                logging.info("Failed operators")
-                logging.info(failed_operators)
+                logging.info("Iteration %s: Failed operators" % (iteration))
+                logging.info("%s" % (failed_operators))
 
             if not watch_nodes_status or not watch_namespaces_status:
                 if not watch_namespaces_status:
-                    logging.info("Failed pods and components")
+                    logging.info("Iteration %s: Failed pods and components" % (iteration))
                     for namespace, failures in failed_pods_components.items():
                         logging.info("%s: %s", namespace, failures)
                         for pod, containers in failed_pod_containers[namespace].items():
                             logging.info("Failed containers in %s: %s", pod, containers)
+                    logging.info("")
 
                 if slack_integration:
                     slackcli.slack_logging(cluster_info, iteration, watch_nodes_status,
@@ -175,8 +182,20 @@ def main(cfg):
                 publish_cerberus_status(cerberus_status)
 
             # Sleep for the specified duration
-            logging.info("Sleeping for the specified duration: %s" % (sleep_time))
+            logging.info("Sleeping for the specified duration: %s\n" % (sleep_time))
             time.sleep(float(sleep_time))
+
+            crashed_restarted_pods = defaultdict(list)
+
+            for namespace in watch_namespaces:
+                crashed_restarted_pods.update(kubecli.namespace_sleep_tracker(namespace))
+
+            if crashed_restarted_pods:
+                logging.info("Pods that were crashed/restarted during the sleep interval of "
+                             "iteration %s" % (iteration))
+                for namespace, pods in crashed_restarted_pods.items():
+                    logging.info("%s: %s" % (namespace, pods))
+                logging.info("")
 
         else:
             logging.info("Completed watching for the specified number of iterations: %s"

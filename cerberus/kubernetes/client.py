@@ -1,9 +1,13 @@
+import yaml
 import logging
 from collections import defaultdict
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 import cerberus.invoke.command as runcommand
-import yaml
+
+
+pods_tracker = defaultdict(dict)
+
 
 # Load kubeconfig and initialize kubernetes python client
 def initialize_clients(kubeconfig_path):
@@ -35,6 +39,14 @@ def list_pods(namespace):
     for pod in ret.items:
         pods.append(pod.metadata.name)
     return pods
+
+
+def get_pod_status(pod, namespace):
+    try:
+        return cli.read_namespaced_pod_status(pod, namespace, pretty=True)
+    except ApiException as e:
+        logging.error("Exception when calling \
+                      CoreV1Api->read_namespaced_pod_status: %s\n" % e)
 
 
 # Monitor the status of the cluster nodes and set the status to true or false
@@ -80,6 +92,37 @@ def check_sdn_namespace():
         please specify the correct networking namespace in config file")
 
 
+# Track the pods that were crashed/restarted during the sleep interval after an iteration
+def namespace_sleep_tracker(namespace):
+    global pods_tracker
+    pods = list_pods(namespace)
+    crashed_restarted_pods = defaultdict(list)
+    for pod in pods:
+        pod_info = get_pod_status(pod, namespace)
+        pod_status = pod_info.status
+        pod_status_phase = pod_status.phase
+        pod_restart_count = 0
+        if pod_status_phase != "Succeeded":
+            pod_creation_timestamp = pod_info.metadata.creation_timestamp
+            if pod_status.container_statuses:
+                for container in pod_status.container_statuses:
+                    pod_restart_count += container.restart_count
+            if pod_status.init_container_statuses:
+                for container in pod_status.init_container_statuses:
+                    pod_restart_count += container.restart_count
+            if pods_tracker[pod]:
+                if pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp or \
+                    pods_tracker[pod]["restart_count"] != pod_restart_count:
+                    crashed_restarted_pods[namespace].append(pod)
+                    pods_tracker[pod]["creation_timestamp"] = pod_creation_timestamp
+                    pods_tracker[pod]["restart_count"] = pod_restart_count
+            else:
+                crashed_restarted_pods[namespace].append(pod)
+                pods_tracker[pod]["creation_timestamp"] = pod_creation_timestamp
+                pods_tracker[pod]["restart_count"] = pod_restart_count
+    return crashed_restarted_pods
+
+
 # Monitor the status of the pods in the specified namespace
 # and set the status to true or false
 def monitor_namespace(namespace):
@@ -87,12 +130,7 @@ def monitor_namespace(namespace):
     notready_pods = set()
     notready_containers = defaultdict(list)
     for pod in pods:
-        try:
-            pod_info = cli.read_namespaced_pod_status(pod, namespace,
-                                                      pretty=True)
-        except ApiException as e:
-            logging.error("Exception when calling \
-                           CoreV1Api->read_namespaced_pod_status: %s\n" % e)
+        pod_info = get_pod_status(pod, namespace)
         pod_status = pod_info.status
         pod_status_phase = pod_status.phase
         if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
@@ -117,15 +155,6 @@ def monitor_namespace(namespace):
     else:
         status = True
     return status, notready_pods, notready_containers
-
-
-# Monitor component namespace
-def monitor_component(iteration, component_namespace):
-    watch_component_status, failed_component_pods, failed_containers = \
-        monitor_namespace(component_namespace)
-    logging.info("Iteration %s: %s: %s"
-                 % (iteration, component_namespace, watch_component_status))
-    return watch_component_status, failed_component_pods, failed_containers
 
 
 # Get cluster operators and return yaml
