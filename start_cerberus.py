@@ -57,7 +57,7 @@ def main(cfg):
         logging.info("Fetching cluster info")
         cluster_version = runcommand.invoke("kubectl get clusterversion")
         cluster_info = runcommand.invoke("kubectl cluster-info | awk 'NR==1' | sed -r "
-                                         "'s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g'") # noqa
+                                         "'s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g'")  # noqa
         logging.info("\n%s%s" % (cluster_version, cluster_info))
 
         # Run http server using a separate thread if cerberus is asked
@@ -78,6 +78,9 @@ def main(cfg):
             logging.info("Detailed inspection of failed components has been enabled")
             inspect.delete_inspect_directory()
 
+        # get list of all master nodes to verify scheduling
+        master_nodes = kubecli.list_nodes("node-role.kubernetes.io/master")
+
         # Initialize the start iteration to 0
         iteration = 0
 
@@ -93,6 +96,12 @@ def main(cfg):
         # Loop to run the components status checks starts here
         while (int(iteration) < iterations):
             iteration += 1
+
+            for node in master_nodes:
+                taint = kubecli.get_taint_from_describe(node)
+                if "none" in str(taint).lower() or "NoSchedule" not in str(taint):
+                    logging.info("Iteration %s: Master node %s has incorrect scheduling taint, "
+                                 "%s " % (iteration, node, str(taint)))
 
             if slack_integration:
                 weekday = runcommand.invoke("date '+%A'")[:-1]
@@ -169,7 +178,7 @@ def main(cfg):
 
             # Report failures in a slack channel
             if not watch_nodes_status or not watch_namespaces_status or \
-                not watch_cluster_operators_status:
+                    not watch_cluster_operators_status:
                 if slack_integration:
                     slackcli.slack_logging(cluster_info, iteration, watch_nodes_status,
                                            failed_nodes, watch_cluster_operators_status,

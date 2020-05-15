@@ -181,3 +181,12 @@ def monitor_cluster_operator(cluster_operators):
     else:
         status = True
     return status, failed_operators
+
+
+# This will get the taint information for each of the master nodes
+def get_taint_from_describe(node_name):
+    # Will return the taints for the master nodes
+    node_taint = runcommand.invoke("kubectl describe nodes/" + node_name + ' | grep Taints')
+    # Need to get the taint type and take out any extra spaces
+    taint_info = node_taint.split(':')[-1].replace(" ", '')
+    return taint_info
