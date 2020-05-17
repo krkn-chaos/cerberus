@@ -2,8 +2,8 @@ import yaml
 import logging
 from collections import defaultdict
 from kubernetes import client, config
-from kubernetes.client.rest import ApiException
 import cerberus.invoke.command as runcommand
+from kubernetes.client.rest import ApiException
 
 
 pods_tracker = defaultdict(dict)
@@ -17,10 +17,13 @@ def initialize_clients(kubeconfig_path):
 
 
 # List nodes in the cluster
-def list_nodes():
+def list_nodes(label_selector=None):
     nodes = []
     try:
-        ret = cli.list_node(pretty=True)
+        if label_selector:
+            ret = cli.list_node(pretty=True, label_selector=label_selector)
+        else:
+            ret = cli.list_node(pretty=True)
     except ApiException as e:
         logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
     for node in ret.items:
@@ -67,10 +70,7 @@ def monitor_nodes():
                 node_ready_status = condition.status
             else:
                 continue
-        if (
-            node_kerneldeadlock_status != "False"        # noqa
-            or node_ready_status != "True"               # noqa
-        ):
+        if node_kerneldeadlock_status != "False" or node_ready_status != "True":
             notready_nodes.append(node)
     if len(notready_nodes) != 0:
         status = False
@@ -92,7 +92,7 @@ def check_sdn_namespace():
         please specify the correct networking namespace in config file")
 
 
-# Track the pods that were crashed/restarted during the sleep interval after an iteration
+# Track the pods that were crashed/restarted during the sleep interval of an iteration
 def namespace_sleep_tracker(namespace):
     global pods_tracker
     pods = list_pods(namespace)
@@ -166,23 +166,18 @@ def get_cluster_operators():
 
 # Monitor cluster operators
 def monitor_cluster_operator(cluster_operators):
-
     failed_operators = []
     for operator in cluster_operators['items']:
-
         # loop through the conditions in the status section to find the dedgraded condition
         for status_cond in operator['status']['conditions']:
-            if status_cond['type'] == "Degraded":
-                # if the degraded status is not false, add it to the failed operators to return
-                if status_cond['status'] != "False":
-                    failed_operators.append(operator['metadata']['name'])
+            # if the degraded status is not false, add it to the failed operators to return
+            if status_cond['type'] == "Degraded" and status_cond['status'] != "False":
+                failed_operators.append(operator['metadata']['name'])
                 break
-
     # if failed operators is not 0, return a failure
     # else return pass
     if len(failed_operators) != 0:
         status = False
     else:
         status = True
-
     return status, failed_operators
