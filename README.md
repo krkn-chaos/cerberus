@@ -145,7 +145,7 @@ Once installed you will see node-problem-detector pods in openshift-node-problem
 Now enable openshift-node-problem-detector in the [config.yaml](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml).
 Cerberus just monitors `KernelDeadlock` condition provided by the node problem detector as it is system critical and can hinder node performance.
 
-#### Use cases
+### Use cases
 There can be number of use cases, here are some of them:
 - We run tools to push the limits of Kubernetes/OpenShift to look at the performance and scalability. There are a number of instances where system components or nodes start to degrade, which invalidates the results and the workload generator continues to push the cluster until it is unrecoverable.
 

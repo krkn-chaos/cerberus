@@ -31,16 +31,16 @@ def main(cfg):
     if os.path.isfile(cfg):
         with open(cfg, 'r') as f:
             config = yaml.full_load(f)
-        watch_nodes = config["cerberus"]["watch_nodes"]
-        watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", True)
-        cerberus_publish_status = config["cerberus"]["cerberus_publish_status"]
-        watch_namespaces = config["cerberus"]["watch_namespaces"]
-        kubeconfig_path = config["cerberus"]["kubeconfig_path"]
-        inspect_components = config["cerberus"]["inspect_components"]
-        slack_integration = config["cerberus"]["slack_integration"]
-        iterations = config["tunings"]["iterations"]
-        sleep_time = config["tunings"]["sleep_time"]
-        daemon_mode = config["tunings"]["daemon_mode"]
+        kubeconfig_path = config["cerberus"].get("kubeconfig_path", "")
+        watch_nodes = config["cerberus"].get("watch_nodes", False)
+        watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", False)
+        watch_namespaces = config["cerberus"].get("watch_namespaces", [])
+        cerberus_publish_status = config["cerberus"].get("cerberus_publish_status", False)
+        inspect_components = config["cerberus"].get("inspect_components", False)
+        slack_integration = config["cerberus"].get("slack_integration", False)
+        iterations = config["tunings"].get("iterations", 0)
+        sleep_time = config["tunings"].get("sleep_time", 0)
+        daemon_mode = config["tunings"].get("daemon_mode", False)
 
         # Initialize clients
         if not os.path.isfile(kubeconfig_path):
@@ -50,7 +50,8 @@ def main(cfg):
 
         if "openshift-sdn" in watch_namespaces:
             sdn_namespace = kubecli.check_sdn_namespace()
-            watch_namespaces = [w.replace('openshift-sdn', sdn_namespace) for w in watch_namespaces]
+            watch_namespaces = [namespace.replace('openshift-sdn', sdn_namespace)
+                                for namespace in watch_namespaces]
 
         # Cluster info
         logging.info("Fetching cluster info")
@@ -95,8 +96,8 @@ def main(cfg):
 
             if slack_integration:
                 weekday = runcommand.invoke("date '+%A'")[:-1]
-                cop_slack_member_ID = config["cerberus"]["cop_slack_ID"][weekday]
-                slack_team_alias = config["cerberus"]["slack_team_alias"]
+                cop_slack_member_ID = config["cerberus"]["cop_slack_ID"].get(weekday, None)
+                slack_team_alias = config["cerberus"].get("slack_team_alias", None)
                 slackcli.slack_tagging(cop_slack_member_ID, slack_team_alias)
 
                 if iteration == 1:
@@ -152,24 +153,27 @@ def main(cfg):
             # Logging the failed components
             if not watch_nodes_status:
                 logging.info("Iteration %s: Failed nodes" % (iteration))
-                logging.info("%s" % (failed_nodes))
+                logging.info("%s\n" % (failed_nodes))
 
             if not watch_cluster_operators_status:
                 logging.info("Iteration %s: Failed operators" % (iteration))
-                logging.info("%s" % (failed_operators))
+                logging.info("%s\n" % (failed_operators))
 
-            if not watch_nodes_status or not watch_namespaces_status:
-                if not watch_namespaces_status:
-                    logging.info("Iteration %s: Failed pods and components" % (iteration))
-                    for namespace, failures in failed_pods_components.items():
-                        logging.info("%s: %s", namespace, failures)
-                        for pod, containers in failed_pod_containers[namespace].items():
-                            logging.info("Failed containers in %s: %s", pod, containers)
-                    logging.info("")
+            if not watch_namespaces_status:
+                logging.info("Iteration %s: Failed pods and components" % (iteration))
+                for namespace, failures in failed_pods_components.items():
+                    logging.info("%s: %s", namespace, failures)
+                    for pod, containers in failed_pod_containers[namespace].items():
+                        logging.info("Failed containers in %s: %s", pod, containers)
+                logging.info("")
 
+            # Report failures in a slack channel
+            if not watch_nodes_status or not watch_namespaces_status or \
+                not watch_cluster_operators_status:
                 if slack_integration:
                     slackcli.slack_logging(cluster_info, iteration, watch_nodes_status,
-                                           watch_namespaces_status, failed_nodes,
+                                           failed_nodes, watch_cluster_operators_status,
+                                           failed_operators, watch_namespaces_status,
                                            failed_pods_components)
 
             if inspect_components:
