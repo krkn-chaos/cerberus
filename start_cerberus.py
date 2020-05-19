@@ -36,6 +36,7 @@ def main(cfg):
         watch_nodes = config["cerberus"].get("watch_nodes", False)
         watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", False)
         watch_namespaces = config["cerberus"].get("watch_namespaces", [])
+        watch_url_routes = config["cerberus"].get("watch_url_routes", [])
         cerberus_publish_status = config["cerberus"].get("cerberus_publish_status", False)
         inspect_components = config["cerberus"].get("inspect_components", False)
         slack_integration = config["cerberus"].get("slack_integration", False)
@@ -179,7 +180,20 @@ def main(cfg):
                 if not watch_component_status:
                     failed_pods_components[namespace] = failed_component_pods
                     failed_pod_containers[namespace] = failed_containers
+
             iter_track_time['watch_namespaces'] = time.time() - watch_namespaces_start_time
+
+            watch_routes_start_time = time.time()
+            failed_routes = []
+            for route_info in watch_url_routes:
+                # Might need to get different authorization types here
+                header = {'Accept': 'application/json'}
+                if len(route_info) > 1:
+                    header['Authorization'] = route_info[1]
+                route_status = kubecli.is_url_available(route_info[0], header)
+                if not route_status:
+                    failed_routes.append(route_info[0])
+            iter_track_time['watch_routes'] = time.time() - watch_routes_start_time
 
             # Check for the number of hits
             if cerberus_publish_status:
@@ -204,6 +218,13 @@ def main(cfg):
                     logging.info("%s: %s", namespace, failures)
                     for pod, containers in failed_pod_containers[namespace].items():
                         logging.info("Failed containers in %s: %s", pod, containers)
+                logging.info("")
+
+            # Logging the failed checking of routes
+            if failed_routes:
+                logging.info("Iteration %s: Failed route monitoring" % iteration)
+                for route in failed_routes:
+                    logging.info("Route url: %s" % route)
                 logging.info("")
 
             # Report failures in a slack channel

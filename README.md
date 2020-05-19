@@ -21,7 +21,11 @@ cerberus:
     distribution: openshift                              # Distribution can be kubernetes or openshift
     kubeconfig_path: ~/.kube/config                      # Path to kubeconfig
     watch_nodes: True                                    # Set to True for the cerberus to monitor the cluster nodes
-    watch_cluster_operators: True                        # Set to True for cerberus to monitor cluster operators. Parameter is optional, will set to True if not specified 
+    watch_cluster_operators: True                        # Set to True for cerberus to monitor cluster operators. Parameter is optional, will set to True if not specified
+    watch_url_routes:                                    # Route url's you want to monitor
+        - - https://...
+          - Bearer ****                                  #This parameter is optional, specify authorization need for get call to route 
+        - - http://...
     watch_namespaces:                                    # List of namespaces to be monitored
         -    openshift-etcd
         -    openshift-apiserver
@@ -173,6 +177,7 @@ Nodes                    | Watches all the nodes including masters, workers as w
 Namespaces               | Watches all the pods including containers running inside the pods in the namespaces specified in the config | :heavy_check_mark:        |
 Cluster Operators        | Watches all Cluster Operators                                                                               | :heavy_check_mark:        |
 Master Nodes Schedule    | Watches schedule of Master Nodes                                                                            | :heavy_check_mark:        |
+Routes                   | Watches specified routes                                                                                    | :heavy_check_mark:        | 
 
 **NOTE**: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned in the [config](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml) by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
 

@@ -1,13 +1,13 @@
-import yaml
 import logging
-import requests
 from collections import defaultdict
 from kubernetes import client, config
 import cerberus.invoke.command as runcommand
 from kubernetes.client.rest import ApiException
+import yaml
+import requests
 from urllib3.exceptions import InsecureRequestWarning
 
-
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 pods_tracker = defaultdict(dict)
 
 
@@ -205,9 +205,8 @@ def check_master_taint(master_nodes):
 
 
 # See if url is available
-def is_url_available(url):
-    requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
-    response = requests.get(url, verify=False)
+def is_url_available(url, header=None):
+    response = requests.get(url, headers=header, verify=False)
     if response.status_code != 200:
         return False
     else:
