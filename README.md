@@ -24,7 +24,7 @@ cerberus:
     watch_cluster_operators: True                        # Set to True for cerberus to monitor cluster operators. Parameter is optional, will set to True if not specified
     watch_url_routes:                                    # Route url's you want to monitor
         - - https://...
-          - Bearer ****                                  #This parameter is optional, specify authorization need for get call to route 
+          - Bearer ****                                  # This parameter is optional, specify authorization need for get call to route
         - - http://...
     watch_namespaces:                                    # List of namespaces to be monitored
         -    openshift-etcd
@@ -89,6 +89,9 @@ $ podman logs -f cerberus
 The go/no-go signal ( True or False ) gets published at http://`<hostname>`:8080. Note that the cerberus will only support ipv4 for the time being.
 
 **NOTE**: The report is generated at /root/cerberus/cerberus.report inside the container, it can mounted to a directory on the host in case we want to capture it.
+
+#### Run containerized Cerberus as a Kubernetes/OpenShift deployment
+Refer to the [instructions](https://github.com/openshift-scale/cerberus/blob/master/containers/README.md#cerberus-as-a-kubeapp) for information on how to run cerberus as a KubeApp.
 
 #### Report
 The report is generated in the run directory and it contains the information about each check/monitored component status per iteration with timestamps. It also displays information about the components in case of failure. For example:
