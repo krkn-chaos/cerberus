@@ -2,6 +2,7 @@ import re
 import sys
 import yaml
 import json
+import time
 import logging
 import requests
 from collections import defaultdict
@@ -151,9 +152,23 @@ def monitor_nodes():
     return status, notready_nodes
 
 
+def process_nodes(watch_nodes, iteration, iter_track_time):
+    if watch_nodes:
+        watch_nodes_start_time = time.time()
+        watch_nodes_status, failed_nodes = monitor_nodes()
+        iter_track_time['watch_nodes'] = time.time() - watch_nodes_start_time
+        logging.info("Iteration %s: Node status: %s"
+                     % (iteration, watch_nodes_status))
+    else:
+        logging.info("Cerberus is not monitoring nodes, so setting the status "
+                     "to True and assuming that the nodes are ready")
+        watch_nodes_status = True
+        failed_nodes = []
+    return watch_nodes_status, failed_nodes
+
+
 # Track the pods that were crashed/restarted during the sleep interval of an iteration
-def namespace_sleep_tracker(namespace):
-    global pods_tracker
+def namespace_sleep_tracker(namespace, pods_tracker):
     crashed_restarted_pods = defaultdict(list)
     all_pod_info = get_all_pod_info(namespace)
     for pod_info in all_pod_info["items"]:
@@ -223,6 +238,16 @@ def monitor_namespace(namespace):
     return status, notready_pods, notready_containers
 
 
+def process_namespace(iteration, namespace, failed_pods_components, failed_pod_containers):
+    watch_component_status, failed_component_pods, failed_containers = \
+        monitor_namespace(namespace)
+    logging.info("Iteration %s: %s: %s"
+                 % (iteration, namespace, watch_component_status))
+    if not watch_component_status:
+        failed_pods_components[namespace] = failed_component_pods
+        failed_pod_containers[namespace] = failed_containers
+
+
 # Get cluster operators and return yaml
 def get_cluster_operators():
     operators_status = runcommand.invoke("kubectl get co -o yaml")
@@ -247,6 +272,21 @@ def monitor_cluster_operator(cluster_operators):
     # return False if there are failed operators else return True
     status = False if failed_operators else True
     return status, failed_operators
+
+
+def process_cluster_operator(distribution, watch_cluster_operators, iteration, iter_track_time):
+    if distribution == "openshift" and watch_cluster_operators:
+        watch_co_start_time = time.time()
+        status_yaml = get_cluster_operators()
+        watch_cluster_operators_status, failed_operators = \
+            monitor_cluster_operator(status_yaml)
+        iter_track_time['watch_cluster_operators'] = time.time() - watch_co_start_time
+        logging.info("Iteration %s: Cluster Operator status: %s"
+                     % (iteration, watch_cluster_operators_status))
+    else:
+        watch_cluster_operators_status = True
+        failed_operators = []
+    return watch_cluster_operators_status, failed_operators
 
 
 # Check for NoSchedule taint in all the master nodes
@@ -274,6 +314,15 @@ def check_master_taint(master_nodes):
     return schedulable_masters
 
 
+def process_master_taint(master_nodes, iteration, iter_track_time):
+    schedulable_masters = []
+    if iteration % 10 == 1:
+        check_taint_start_time = time.time()
+        schedulable_masters = check_master_taint(master_nodes)
+        iter_track_time['check_master_taint'] = time.time() - check_taint_start_time
+    return schedulable_masters
+
+
 # See if url is available
 def is_url_available(url, header=None):
     response = requests.get(url, headers=header, verify=False)
@@ -281,3 +330,19 @@ def is_url_available(url, header=None):
         return False
     else:
         return True
+
+
+def process_routes(watch_url_routes, iter_track_time):
+    failed_routes = []
+    if watch_url_routes:
+        watch_routes_start_time = time.time()
+        for route_info in watch_url_routes:
+            # Might need to get different authorization types here
+            header = {'Accept': 'application/json'}
+            if len(route_info) > 1:
+                header['Authorization'] = route_info[1]
+            route_status = is_url_available(route_info[0], header)
+            if not route_status:
+                failed_routes.append(route_info[0])
+        iter_track_time['watch_routes'] = time.time() - watch_routes_start_time
+    return failed_routes

@@ -63,6 +63,7 @@ tunings:
     sleep_time: 60                                       # Sleep duration between each iteration
     kube_api_request_chunk_size: 250                     # Large requests will be broken into the specified chunk size to reduce the load on API server and improve responsiveness.
     daemon_mode: True                                    # Iterations are set to infinity which means that the cerberus will monitor the resources forever
+    cores_usage_percentage: 0.5                          # Set the fraction of cores to be used for multiprocessing
 
 database:
     database_path: /tmp/cerberus.db                      # Path where cerberus database needs to be stored
