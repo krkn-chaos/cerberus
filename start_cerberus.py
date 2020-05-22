@@ -31,6 +31,7 @@ def main(cfg):
     if os.path.isfile(cfg):
         with open(cfg, 'r') as f:
             config = yaml.full_load(f)
+        distribution = config["cerberus"].get("distribution", "openshift").lower()
         kubeconfig_path = config["cerberus"].get("kubeconfig_path", "")
         watch_nodes = config["cerberus"].get("watch_nodes", False)
         watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", False)
@@ -74,7 +75,8 @@ def main(cfg):
         if slack_integration:
             slack_integration = slackcli.initialize_slack_client()
 
-        if inspect_components:
+        # Run inspection only when the distribution is openshift
+        if distribution == "openshift" and inspect_components:
             logging.info("Detailed inspection of failed components has been enabled")
             inspect.delete_inspect_directory()
 
@@ -211,9 +213,14 @@ def main(cfg):
                                            failed_operators, watch_namespaces_status,
                                            failed_pods_components)
 
-            if inspect_components:
+            # Run inspection only when the distribution is openshift
+            if distribution == "openshift" and inspect_components:
                 inspect.inspect_components(failed_pods_components)
+            elif distribution == "kubernetes" and inspect_components:
+                logging.info("Skipping the failed components inspection as "
+                             "it's specific to OpenShift")
 
+            # Aggregate the status and publish it
             cerberus_status = watch_nodes_status and watch_namespaces_status \
                 and watch_cluster_operators_status and server_status
 

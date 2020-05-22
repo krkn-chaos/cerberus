@@ -1,7 +1,7 @@
 # Cerberus
-Guardian of Kubernetes Clusters
+Guardian of Kubernetes and OpenShift Clusters
 
-Cerberus watches the Kubernetes/OpenShift clusters for dead nodes, system component failures and exposes a go or no-go signal which can be consumed by other workload generators or applications in the cluster and act accordingly.
+Cerberus watches the Kubernetes/OpenShift clusters for dead nodes, system component failures/health and exposes a go or no-go signal which can be consumed by other workload generators or applications in the cluster and act accordingly.
 
 ### Workflow
 ![Cerberus workflow](media/cerberus-workflow.png)
@@ -18,6 +18,7 @@ Set the supported components to monitor and the tunings like number of iteration
 
 ```
 cerberus:
+    distribution: openshift                              # Distribution can be kubernetes or openshift
     kubeconfig_path: ~/.kube/config                      # Path to kubeconfig
     watch_nodes: True                                    # Set to True for the cerberus to monitor the cluster nodes
     watch_cluster_operators: True                        # Set to True for cerberus to monitor cluster operators. Parameter is optional, will set to True if not specified 
@@ -52,7 +53,9 @@ tunings:
     sleep_time: 60                                       # Sleep duration between each iteration
     daemon_mode: True                                    # Iterations are set to infinity which means that the cerberus will monitor the resources forever
 ```
-NOTE: The current implementation can monitor only one cluster from one host. It can be used to monitor multiple clusters provided multiple instances of Cerberus are launched on different hosts.
+**NOTE**: The current implementation can monitor only one cluster from one host. It can be used to monitor multiple clusters provided multiple instances of Cerberus are launched on different hosts.
+
+**NOTE**: The components especially the namespaces needs to be changed depending on the distribution i.e Kubernetes or OpenShift. The default specified in the config assumes that the distribution is OpenShift.
 
 #### Run
 ```
@@ -73,9 +76,9 @@ $ podman pull quay.io/openshift-scale/cerberus
 $ podman run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config:Z -v <path_to_cerberus_config>:/root/cerberus/config/config.yaml:Z -d quay.io/openshift-scale/cerberus:latest
 $ podman logs -f cerberus
 ```
-The go/no-go signal ( True or False ) gets published at http://<hostname>:8080. Note that the cerberus will only support ipv4 for the time being.
+The go/no-go signal ( True or False ) gets published at http://`<hostname>`:8080. Note that the cerberus will only support ipv4 for the time being.
 
-NOTE: The report is generated at /root/cerberus/cerberus.report inside the container, it can mounted to a directory on the host in case we want to capture it.
+**NOTE**: The report is generated at /root/cerberus/cerberus.report inside the container, it can mounted to a directory on the host in case we want to capture it.
 
 #### Report
 The report is generated in the run directory and it contains the information about each check/monitored component status per iteration with timestamps. It also displays information about the components in case of failure. For example:
@@ -137,8 +140,11 @@ The user has the option to enable/disable the slack integration ( disabled by de
 When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://0.0.0.0:8080 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly.
 
 #### Node Problem Detector
-[node-problem-detector](https://github.com/kubernetes/node-problem-detector) aims to make various node problems visible to the upstream layers in cluster management stack
+[node-problem-detector](https://github.com/kubernetes/node-problem-detector) aims to make various node problems visible to the upstream layers in cluster management stack.
+
 ##### Installation
+Please follow the instructions in the [installation](https://github.com/kubernetes/node-problem-detector#installation) section to setup Node Problem Detector on Kubernetes. The following instructions are setting it up on OpenShift:
+
 1. Create `openshift-node-problem-detector` namespace [ns.yaml](https://github.com/openshift/node-problem-detector-operator/blob/master/deploy/ns.yaml) with        `oc create -f ns.yaml`
 2. Add cluster role with `oc adm policy add-cluster-role-to-user system:node-problem-detector -z default -n openshift-node-problem-detector`
 3. Add security context constraints with `oc adm policy add-scc-to-user privileged system:serviceaccount:openshift-node-problem-detector:default
@@ -158,25 +164,17 @@ There can be number of use cases, here are some of them:
 
 - When running chaos experiments on a kubernetes/OpenShift cluster, they can potentially break the components unrelated to the targeted components which means that the choas experiment won't be able to find it. The go/no-go signal can be used here to decide whether the cluster recovered from the failure injection as well as to decide whether to continue with the next chaos scenario.
 
-### Kubernetes/OpenShift components supported
+### What Kubernetes/OpenShift components can Cerberus monitor?
 Following are the components of Kubernetes/OpenShift that Cerberus can monitor today, we will be adding more soon.
 
-Component                | Description                                                                                        | Working
------------------------- | ---------------------------------------------------------------------------------------------------| ------------------------- |
-Nodes                    | Watches all the nodes including masters, workers as well as nodes created using custom MachineSets | :heavy_check_mark:        |
-Etcd                     | Watches the status of the Etcd member pods                                                         | :heavy_check_mark:        |
-OpenShift ApiServer      | Watches the OpenShift Apiserver pods                                                               | :heavy_check_mark:        |
-Kube ApiServer           | Watches the Kube APiServer pods                                                                    | :heavy_check_mark:        |
-Monitoring               | Watches the monitoring stack                                                                       | :heavy_check_mark:        |
-Kube Controller          | Watches Kube controller                                                                            | :heavy_check_mark:        |
-Machine API              | Watches machine controller, cluster auto-scaler, machine-api-operator                              | :heavy_check_mark:        |
-Kube Scheduler           | Watches Kube scheduler                                                                             | :heavy_check_mark:        |
-Ingress                  | Watches Routers                                                                                    | :heavy_check_mark:        |
-Openshift SDN            | Watches SDN pods                                                                                   | :heavy_check_mark:        |
-OVNKubernetes            | Watches OVN pods                                                                                   | :heavy_check_mark:        |
-Cluster Operators        | Watches all Cluster Operators                                                                      | :heavy_check_mark:        |
-Master Nodes Schedule    | Watches schedule of Master Nodes                                                                   | :heavy_check_mark:        |
-Api Server               | Watches the api server availability                                                                | :heavy_check_mark:        |
+Component                | Description                                                                                                 | Working
+------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------- |
+Nodes                    | Watches all the nodes including masters, workers as well as nodes created using custom MachineSets          | :heavy_check_mark:        |
+Namespaces               | Watches all the pods including containers running inside the pods in the namespaces specified in the config | :heavy_check_mark:        |
+Cluster Operators        | Watches all Cluster Operators                                                                               | :heavy_check_mark:        |
+Master Nodes Schedule    | Watches schedule of Master Nodes                                                                            | :heavy_check_mark:        |
 
-NOTE: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned above by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
+**NOTE**: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned in the [config](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml) by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
 
+### Blogs and other useful resources
+- https://www.openshift.com/blog/openshift-scale-ci-part-4-introduction-to-cerberus-guardian-of-kubernetes/openshift-clouds 
