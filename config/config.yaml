@@ -1,4 +1,5 @@
 cerberus:
+    distribution: openshift                              # Distribution can be kubernetes or openshift
     kubeconfig_path: ~/.kube/config                      # Path to kubeconfig
     watch_nodes: True                                    # Set to True for the cerberus to monitor the cluster nodes
     watch_cluster_operators: True                        # Set to True for cerberus to monitor cluster operators
