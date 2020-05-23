@@ -118,6 +118,13 @@ The report is generated in the run directory and it contains the information abo
 2020-03-26 22:05:32,118 [INFO] Sleeping for the specified duration: 5
 +--------------------------------------------------Failed Components--------------------------------------------------+
 2020-03-26 22:05:37,123 [INFO] Failed openshfit sdn components: ['sdn-xmqhd']
+
+2020-05-23 23:26:43,041 [INFO] ------------------------- Iteration Stats ---------------------------------------------
+2020-05-23 23:26:43,041 [INFO] Time taken to run watch_nodes in iteration 1: 0.0996248722076416 seconds
+2020-05-23 23:26:43,041 [INFO] Time taken to run watch_cluster_operators in iteration 1: 0.3672499656677246 seconds
+2020-05-23 23:26:43,041 [INFO] Time taken to run watch_namespaces in iteration 1: 1.085144281387329 seconds
+2020-05-23 23:26:43,041 [INFO] Time taken to run entire_iteration in iteration 1: 4.107403039932251 seconds
+2020-05-23 23:26:43,041 [INFO] ---------------------------------------------------------------------------------------
 ```
 
 #### Slack integration
