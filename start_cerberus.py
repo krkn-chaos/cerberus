@@ -102,8 +102,13 @@ def main(cfg):
 
         # Loop to run the components status checks starts here
         while (int(iteration) < iterations):
+            # Initialize a dict to store the operations timings per iteration
+            iter_track_time = {}
+            # Capture the start time
+            iteration_start_time = time.time()
             iteration += 1
 
+            # Read the config for info when slack integration is enabled
             if slack_integration:
                 weekday = runcommand.invoke("date '+%A'")[:-1]
                 cop_slack_member_ID = config["cerberus"]["cop_slack_ID"].get(weekday, None)
@@ -126,7 +131,9 @@ def main(cfg):
 
             # Monitor nodes status
             if watch_nodes:
+                watch_nodes_start_time = time.time()
                 watch_nodes_status, failed_nodes = kubecli.monitor_nodes()
+                iter_track_time['watch_nodes'] = time.time() - watch_nodes_start_time
                 logging.info("Iteration %s: Node status: %s"
                              % (iteration, watch_nodes_status))
             else:
@@ -136,9 +143,11 @@ def main(cfg):
 
             # Monitor cluster operators status
             if watch_cluster_operators:
+                watch_co_start_time = time.time()
                 status_yaml = kubecli.get_cluster_operators()
                 watch_cluster_operators_status, failed_operators = \
                     kubecli.monitor_cluster_operator(status_yaml)
+                iter_track_time['watch_cluster_operators'] = time.time() - watch_co_start_time
                 logging.info("Iteration %s: Cluster Operator status: %s"
                              % (iteration, watch_cluster_operators_status))
             else:
@@ -156,6 +165,7 @@ def main(cfg):
             watch_namespaces_status = True
 
             # Monitor each component in the namespace
+            watch_namespaces_start_time = time.time()
             for namespace in watch_namespaces:
                 watch_component_status, failed_component_pods, failed_containers = \
                     kubecli.monitor_namespace(namespace)
@@ -165,6 +175,7 @@ def main(cfg):
                 if not watch_component_status:
                     failed_pods_components[namespace] = failed_component_pods
                     failed_pod_containers[namespace] = failed_containers
+            iter_track_time['watch_namespaces'] = time.time() - watch_namespaces_start_time
 
             # Check for the number of hits
             if cerberus_publish_status:
@@ -224,6 +235,16 @@ def main(cfg):
                 for namespace, pods in crashed_restarted_pods.items():
                     logging.info("%s: %s" % (namespace, pods))
                 logging.info("")
+
+            # Capture total time taken by the iteration
+            iter_track_time['entire_iteration'] = (time.time() - iteration_start_time) - sleep_time  # noqa
+
+            # Print the captured timing for each operation
+            logging.info("-------------------------- Iteration Stats ---------------------------")
+            for operation, timing in iter_track_time.items():
+                logging.info("Time taken to run %s in iteration %s: %s seconds"
+                             % (operation, iteration, timing))
+            logging.info("----------------------------------------------------------------------")
 
         else:
             logging.info("Completed watching for the specified number of iterations: %s"
