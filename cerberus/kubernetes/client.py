@@ -170,11 +170,15 @@ def monitor_cluster_operator(cluster_operators):
     failed_operators = []
     for operator in cluster_operators['items']:
         # loop through the conditions in the status section to find the dedgraded condition
-        for status_cond in operator['status']['conditions']:
-            # if the degraded status is not false, add it to the failed operators to return
-            if status_cond['type'] == "Degraded" and status_cond['status'] != "False":
-                failed_operators.append(operator['metadata']['name'])
-                break
+        if "status" in operator.keys() and "conditions" in operator['status'].keys():
+            for status_cond in operator['status']['conditions']:
+                # if the degraded status is not false, add it to the failed operators to return
+                if status_cond['type'] == "Degraded" and status_cond['status'] != "False":
+                    failed_operators.append(operator['metadata']['name'])
+                    break
+        else:
+            logging.info("Can't find status of " + operator['metadata']['name'])
+            failed_operators.append(operator['metadata']['name'])
     # if failed operators is not 0, return a failure
     # else return pass
     if len(failed_operators) != 0:
