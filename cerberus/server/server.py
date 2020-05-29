@@ -21,7 +21,7 @@ def start_server(address):
     server = address[0]
     port = address[1]
     httpd = HTTPServer(address, SimpleHTTPRequestHandler)
-    logging.info("Starting http server at http://%s:%s" % (server, port))
+    logging.info("Starting http server at http://%s:%s\n" % (server, port))
     try:
         _thread.start_new_thread(httpd.serve_forever, ())
     except Exception:

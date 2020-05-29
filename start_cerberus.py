@@ -3,11 +3,11 @@
 import os
 import sys
 import yaml
+import time
 import logging
 import optparse
 import pyfiglet
 from collections import defaultdict
-import time
 import cerberus.server.server as server
 import cerberus.inspect.inspect as inspect
 import cerberus.invoke.command as runcommand
@@ -84,9 +84,8 @@ def main(cfg):
         master_nodes = kubecli.list_nodes("node-role.kubernetes.io/master")
 
         # Use cluster_info to get the api server url
-        api_server_url = cluster_info.split(" ")[-1] + "/healthz"
+        api_server_url = cluster_info.split(" ")[-1].strip() + "/healthz"
 
-        # This can become a json structure to keep track of all the failures issue:58
         # Counter for if api server is not ok
         api_fail_count = 0
 
@@ -125,11 +124,14 @@ def main(cfg):
             if not server_status:
                 api_fail_count += 1
 
-            for node in master_nodes:
-                taint = kubecli.get_taint_from_describe(node)
-                if "none" in str(taint).lower() or "NoSchedule" not in str(taint):
-                    logging.info("Iteration %s: Master node %s has incorrect scheduling taint, "
-                                 "%s " % (iteration, node, str(taint)))
+            # Check for NoSchedule taint in all the master nodes once in every 10 iterations
+            if iteration % 10 == 1:
+                check_taint_start_time = time.time()
+                schedulable_masters = kubecli.check_master_taint(master_nodes)
+                iter_track_time['check_master_taint'] = time.time() - check_taint_start_time
+                if schedulable_masters:
+                    logging.warning("Iteration %s: Masters without NoSchedule taint: %s\n"
+                                    % (iteration, schedulable_masters))
 
             # Monitor nodes status
             if watch_nodes:
@@ -251,7 +253,7 @@ def main(cfg):
             for operation, timing in iter_track_time.items():
                 logging.info("Time taken to run %s in iteration %s: %s seconds"
                              % (operation, iteration, timing))
-            logging.info("----------------------------------------------------------------------")
+            logging.info("----------------------------------------------------------------------\n")
 
         else:
             logging.info("Completed watching for the specified number of iterations: %s"

@@ -1,11 +1,12 @@
 import yaml
 import logging
+import requests
 from collections import defaultdict
 from kubernetes import client, config
 import cerberus.invoke.command as runcommand
 from kubernetes.client.rest import ApiException
-import requests
 from urllib3.exceptions import InsecureRequestWarning
+
 
 pods_tracker = defaultdict(dict)
 
@@ -30,6 +31,14 @@ def list_nodes(label_selector=None):
     for node in ret.items:
         nodes.append(node.metadata.name)
     return nodes
+
+
+def get_node_info(node):
+    try:
+        return cli.read_node_status(node, pretty=True)
+    except ApiException as e:
+        logging.error("Exception when calling \
+                       CoreV1Api->read_node_status: %s\n" % e)
 
 
 # List pods in the given namespace
@@ -59,11 +68,7 @@ def monitor_nodes():
     notready_nodes = []
     for node in nodes:
         node_kerneldeadlock_status = "False"
-        try:
-            node_info = cli.read_node_status(node, pretty=True)
-        except ApiException as e:
-            logging.error("Exception when calling \
-                           CoreV1Api->read_node_status: %s\n" % e)
+        node_info = get_node_info(node)
         for condition in node_info.status.conditions:
             if condition.type == "KernelDeadlock":
                 node_kerneldeadlock_status = condition.status
@@ -73,10 +78,7 @@ def monitor_nodes():
                 continue
         if node_kerneldeadlock_status != "False" or node_ready_status != "True":
             notready_nodes.append(node)
-    if len(notready_nodes) != 0:
-        status = False
-    else:
-        status = True
+    status = False if notready_nodes else True
     return status, notready_nodes
 
 
@@ -151,7 +153,7 @@ def monitor_namespace(namespace):
                                 if not container.ready:
                                     notready_containers[pod].append(container.name)
     notready_pods = list(notready_pods)
-    if len(notready_pods) != 0 or len(notready_containers) != 0:
+    if notready_pods or notready_containers:
         status = False
     else:
         status = True
@@ -179,27 +181,31 @@ def monitor_cluster_operator(cluster_operators):
         else:
             logging.info("Can't find status of " + operator['metadata']['name'])
             failed_operators.append(operator['metadata']['name'])
-    # if failed operators is not 0, return a failure
-    # else return pass
-    if len(failed_operators) != 0:
-        status = False
-    else:
-        status = True
+    # return False if there are failed operators else return True
+    status = False if failed_operators else True
     return status, failed_operators
 
 
-# This will get the taint information for each of the master nodes
-def get_taint_from_describe(node_name):
-    # Will return the taints for the master nodes
-    node_taint = runcommand.invoke("kubectl describe nodes/" + node_name + ' | grep Taints')
-    # Need to get the taint type and take out any extra spaces
-    taint_info = node_taint.split(':')[-1].replace(" ", '')
-    return taint_info
+# Check for NoSchedule taint in all the master nodes
+def check_master_taint(master_nodes):
+    schedulable_masters = []
+    for node in master_nodes:
+        node_info = get_node_info(node)
+        NoSchedule_taint = False
+        try:
+            for taint in node_info.spec.taints:
+                if taint.key == "node-role.kubernetes.io/master" and taint.effect == "NoSchedule":
+                    NoSchedule_taint = True
+                    break
+            if not NoSchedule_taint:
+                schedulable_masters.append(node)
+        except Exception:
+            schedulable_masters.append(node)
+    return schedulable_masters
 
 
 # See if url is available
 def is_url_available(url):
-
     requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
     response = requests.get(url, verify=False)
     if response.status_code != 200:
