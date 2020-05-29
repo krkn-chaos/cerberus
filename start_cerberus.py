@@ -13,6 +13,7 @@ import cerberus.inspect.inspect as inspect
 import cerberus.invoke.command as runcommand
 import cerberus.kubernetes.client as kubecli
 import cerberus.slack.slack_client as slackcli
+import cerberus.redis.client as redis_cli
 
 
 # Publish the cerberus status
@@ -42,12 +43,20 @@ def main(cfg):
         iterations = config["tunings"].get("iterations", 0)
         sleep_time = config["tunings"].get("sleep_time", 0)
         daemon_mode = config["tunings"].get("daemon_mode", False)
+        redis_host = config["redis"].get("host", "127.0.0.1")
+        redis_port = config["redis"].get("port", "6379")
+        redis_flush_keys = config["redis"].get("flush_keys", True)
+        redis_cache_expiry_time = config["redis"].get("cache_expiry_time", "1200")
 
         # Initialize clients
         if not os.path.isfile(kubeconfig_path):
             kubeconfig_path = None
         logging.info("Initializing client to talk to the Kubernetes cluster")
         kubecli.initialize_clients(kubeconfig_path)
+
+        # Intialize redis cli
+        redis_cli.initialize(redis_host, redis_port, redis_flush_keys)
+        kubecli.redis_cache_expiry(redis_cache_expiry_time)
 
         if "openshift-sdn" in watch_namespaces:
             sdn_namespace = kubecli.check_sdn_namespace()

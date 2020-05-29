@@ -9,6 +9,13 @@ Cerberus watches the Kubernetes/OpenShift clusters for dead nodes, system compon
 ### Install the dependencies
 ```
 $ pip3 install -r requirements.txt
+
+Cerberus uses redis to cache data in order to avoid overloading API server as well reduce the time it takes to run the checks each iteration. The redis server needs to be installed depending on the distribution and the details like host and port needs to be specified in the config as described in the usage section. Here are the commands to install redis on a Centos/Fedora/RHEL distribution:
+
+$ yum install -y redis
+$ systemctl start redis
+
+**TODO**: Package redis wih Cerberus.
 ```
 
 ### Usage
@@ -52,6 +59,12 @@ tunings:
     iterations: 5                                        # Iterations to loop before stopping the watch, it will be replaced with infinity when the daemon mode is enabled
     sleep_time: 60                                       # Sleep duration between each iteration
     daemon_mode: True                                    # Iterations are set to infinity which means that the cerberus will monitor the resources forever
+
+redis:
+   host: 127.0.0.1                                       # Redis host
+   port: 6379                                            # Redis port
+   flush_keys: True                                      # Flushes all keys to make sure the cache timeer is set right
+   cache_expiry_time: 1200                               # Redis cache expiry time
 ```
 **NOTE**: The current implementation can monitor only one cluster from one host. It can be used to monitor multiple clusters provided multiple instances of Cerberus are launched on different hosts.
 

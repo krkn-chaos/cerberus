@@ -6,3 +6,4 @@ datetime
 configparser
 slackclient
 pyfiglet
+redis

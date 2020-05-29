@@ -6,6 +6,8 @@ import cerberus.invoke.command as runcommand
 from kubernetes.client.rest import ApiException
 import requests
 from urllib3.exceptions import InsecureRequestWarning
+import cerberus.redis.client as redis_cli
+
 
 pods_tracker = defaultdict(dict)
 
@@ -17,34 +19,81 @@ def initialize_clients(kubeconfig_path):
     cli = client.CoreV1Api()
 
 
+# Set redis cache expiry time
+def redis_cache_expiry(time):
+    global expiry_time
+    expiry_time = time
+
+
 # List nodes in the cluster
 def list_nodes(label_selector=None):
     nodes = []
-    try:
-        if label_selector:
-            ret = cli.list_node(pretty=True, label_selector=label_selector)
-        else:
-            ret = cli.list_node(pretty=True)
-    except ApiException as e:
-        logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
-    for node in ret.items:
-        nodes.append(node.metadata.name)
+    if label_selector is None:
+        node_key = 'nodes'
+    else:
+        node_key = 'nodes' + label_selector
+    status = redis_cli.check_if_exists(node_key)
+    if status == 0:
+        try:
+            if label_selector:
+                ret = cli.list_node(pretty=True, label_selector=label_selector)
+            else:
+                ret = cli.list_node(pretty=True)
+        except ApiException as e:
+            logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
+        for node in ret.items:
+            nodes.append(node.metadata.name)
+            redis_cli.insert_sets(node_key, node.metadata.name)
+        redis_cli.set_expiry(node_key, expiry_time)
+    else:
+        nodes = redis_cli.get_set_items(node_key)
     return nodes
 
 
 # List pods in the given namespace
 def list_pods(namespace):
     pods = []
-    try:
-        ret = cli.list_namespaced_pod(namespace, pretty=True)
-    except ApiException as e:
-        logging.error("Exception when calling \
-                       CoreV1Api->list_namespaced_pod: %s\n" % e)
-    for pod in ret.items:
-        pods.append(pod.metadata.name)
+    pods_key = 'pods' + namespace
+    status = redis_cli.check_if_exists(pods_key)
+    if status == 0:
+        try:
+            ret = cli.list_namespaced_pod(namespace, pretty=True)
+        except ApiException as e:
+            logging.error("Exception when calling \
+                           CoreV1Api->list_namespaced_pod: %s\n" % e)
+        for pod in ret.items:
+            pods.append(pod.metadata.name)
+            redis_cli.insert_sets(pods_key, pod.metadata.name)
+        # Expire the key in cache after the specified time
+        redis_cli.set_expiry(pods_key, expiry_time)
+    else:
+        pods = redis_cli.get_set_items(pods_key)
     return pods
 
 
+# Get the list of namespaces
+def list_namespaces():
+    namespaces = []
+    key = 'namespaces'
+    status = redis_cli.check_if_exists(key)
+    if status == 0:
+        try:
+            namespaces_list = cli.list_namespace()
+        except ApiException as e:
+            logging.error("Exception when calling \
+                       CoreV1Api->list_namespaces: %s\n" % e)
+        for namespace in namespaces_list.items:
+            namespaces.append(namespace.metadata.name)
+        for namespace in namespaces:
+            redis_cli.insert_sets(key, namespace)
+        # Expire the key in cache after the specified time
+        redis_cli.set_expiry(key, expiry_time)
+    else:
+        namespaces = redis_cli.get_set_items(key)
+    return namespaces
+
+
+# Get pod status
 def get_pod_status(pod, namespace):
     try:
         return cli.read_namespaced_pod_status(pod, namespace, pretty=True)
@@ -82,10 +131,11 @@ def monitor_nodes():
 
 # Check the namespace name for default SDN
 def check_sdn_namespace():
-    for item in cli.list_namespace().items:
-        if item.metadata.name == "openshift-ovn-kubernetes":
+    namespaces = list_namespaces()
+    for namespace in namespaces:
+        if namespace == "openshift-ovn-kubernetes":
             return "openshift-ovn-kubernetes"
-        elif item.metadata.name == "openshift-sdn":
+        elif namespace == "openshift-sdn":
             return "openshift-sdn"
         else:
             continue
@@ -199,7 +249,6 @@ def get_taint_from_describe(node_name):
 
 # See if url is available
 def is_url_available(url):
-
     requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
     response = requests.get(url, verify=False)
     if response.status_code != 200:
