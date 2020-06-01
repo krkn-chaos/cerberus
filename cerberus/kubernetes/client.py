@@ -1,10 +1,11 @@
+import yaml
+import json
 import logging
+import requests
 from collections import defaultdict
 from kubernetes import client, config
 import cerberus.invoke.command as runcommand
 from kubernetes.client.rest import ApiException
-import yaml
-import requests
 from urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
@@ -62,18 +63,25 @@ def get_pod_status(pod, namespace):
                       CoreV1Api->read_namespaced_pod_status: %s\n" % e)
 
 
+def get_all_pod_info(namespace):
+    all_pod_info = runcommand.invoke("kubectl get pods -n " + namespace + " -o json")
+    all_pod_info = json.loads(all_pod_info)
+    return all_pod_info
+
+
 # Monitor the status of the cluster nodes and set the status to true or false
 def monitor_nodes():
-    nodes = list_nodes()
     notready_nodes = []
-    for node in nodes:
+    all_node_info = runcommand.invoke("kubectl get nodes -o json")
+    all_node_info = json.loads(all_node_info)
+    for node_info in all_node_info["items"]:
+        node = node_info["metadata"]["name"]
         node_kerneldeadlock_status = "False"
-        node_info = get_node_info(node)
-        for condition in node_info.status.conditions:
-            if condition.type == "KernelDeadlock":
-                node_kerneldeadlock_status = condition.status
-            elif condition.type == "Ready":
-                node_ready_status = condition.status
+        for condition in node_info["status"]["conditions"]:
+            if condition["type"] == "KernelDeadlock":
+                node_kerneldeadlock_status = condition["status"]
+            elif condition["type"] == "Ready":
+                node_ready_status = condition["status"]
             else:
                 continue
         if node_kerneldeadlock_status != "False" or node_ready_status != "True":
@@ -91,28 +99,28 @@ def check_sdn_namespace():
             return "openshift-sdn"
         else:
             continue
-    logging.error("Could not find openshift-sdn and openshift-ovn-kubernetes namespaces, \
-        please specify the correct networking namespace in config file")
+    logging.error("Could not find openshift-sdn and openshift-ovn-kubernetes namespaces, "
+                  "please specify the correct networking namespace in config file")
 
 
 # Track the pods that were crashed/restarted during the sleep interval of an iteration
 def namespace_sleep_tracker(namespace):
     global pods_tracker
-    pods = list_pods(namespace)
     crashed_restarted_pods = defaultdict(list)
-    for pod in pods:
-        pod_info = get_pod_status(pod, namespace)
-        pod_status = pod_info.status
-        pod_status_phase = pod_status.phase
+    all_pod_info = get_all_pod_info(namespace)
+    for pod_info in all_pod_info["items"]:
+        pod = pod_info["metadata"]["name"]
+        pod_status = pod_info["status"]
+        pod_status_phase = pod_status["phase"]
         pod_restart_count = 0
         if pod_status_phase != "Succeeded":
-            pod_creation_timestamp = pod_info.metadata.creation_timestamp
-            if pod_status.container_statuses:
-                for container in pod_status.container_statuses:
-                    pod_restart_count += container.restart_count
-            if pod_status.init_container_statuses:
-                for container in pod_status.init_container_statuses:
-                    pod_restart_count += container.restart_count
+            pod_creation_timestamp = pod_info["metadata"]["creationTimestamp"]
+            if "containerStatuses" in pod_status:
+                for container in pod_status["containerStatuses"]:
+                    pod_restart_count += container["restartCount"]
+            if "initContainerStatuses" in pod_status:
+                for container in pod_status["initContainerStatuses"]:
+                    pod_restart_count += container["restartCount"]
             if pods_tracker[pod]:
                 if pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp or \
                     pods_tracker[pod]["restart_count"] != pod_restart_count:
@@ -129,29 +137,29 @@ def namespace_sleep_tracker(namespace):
 # Monitor the status of the pods in the specified namespace
 # and set the status to true or false
 def monitor_namespace(namespace):
-    pods = list_pods(namespace)
     notready_pods = set()
     notready_containers = defaultdict(list)
-    for pod in pods:
-        pod_info = get_pod_status(pod, namespace)
-        pod_status = pod_info.status
-        pod_status_phase = pod_status.phase
+    all_pod_info = get_all_pod_info(namespace)
+    for pod_info in all_pod_info["items"]:
+        pod = pod_info["metadata"]["name"]
+        pod_status = pod_info["status"]
+        pod_status_phase = pod_status["phase"]
         if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
             notready_pods.add(pod)
         if pod_status_phase != "Succeeded":
-            if pod_status.conditions:
-                for condition in pod_status.conditions:
-                    if condition.type == "Ready" and condition.status == "False":
+            if "conditions" in pod_status:
+                for condition in pod_status["conditions"]:
+                    if condition["type"] == "Ready" and condition["status"] == "False":
                         notready_pods.add(pod)
-                    if condition.type == "ContainersReady" and condition.status == "False":
-                        if pod_status.container_statuses:
-                            for container in pod_status.container_statuses:
-                                if not container.ready:
-                                    notready_containers[pod].append(container.name)
-                        if pod_status.init_container_statuses:
-                            for container in pod_status.init_container_statuses:
-                                if not container.ready:
-                                    notready_containers[pod].append(container.name)
+                    if condition["type"] == "ContainersReady" and condition["status"] == "False":
+                        if "containerStatuses" in pod_status:
+                            for container in pod_status["containerStatuses"]:
+                                if not container["ready"]:
+                                    notready_containers[pod].append(container["name"])
+                        if "initContainerStatuses" in pod_status:
+                            for container in pod_status["initContainerStatuses"]:
+                                if not container["ready"]:
+                                    notready_containers[pod].append(container["name"])
     notready_pods = list(notready_pods)
     if notready_pods or notready_containers:
         status = False
@@ -189,12 +197,15 @@ def monitor_cluster_operator(cluster_operators):
 # Check for NoSchedule taint in all the master nodes
 def check_master_taint(master_nodes):
     schedulable_masters = []
-    for node in master_nodes:
-        node_info = get_node_info(node)
+    all_master_info = runcommand.invoke("kubectl get nodes " + " ".join(master_nodes) + " -o json")
+    all_master_info = json.loads(all_master_info)
+    for node_info in all_master_info["items"]:
+        node = node_info["metadata"]["name"]
         NoSchedule_taint = False
         try:
-            for taint in node_info.spec.taints:
-                if taint.key == "node-role.kubernetes.io/master" and taint.effect == "NoSchedule":
+            for taint in node_info["spec"]["taints"]:
+                if taint["key"] == "node-role.kubernetes.io/master" and \
+                    taint["effect"] == "NoSchedule":
                     NoSchedule_taint = True
                     break
             if not NoSchedule_taint:
