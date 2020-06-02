@@ -13,6 +13,7 @@ import cerberus.inspect.inspect as inspect
 import cerberus.invoke.command as runcommand
 import cerberus.kubernetes.client as kubecli
 import cerberus.slack.slack_client as slackcli
+import cerberus.prometheus.client as promcli
 
 
 # Publish the cerberus status
@@ -39,6 +40,8 @@ def main(cfg):
         cerberus_publish_status = config["cerberus"].get("cerberus_publish_status", False)
         inspect_components = config["cerberus"].get("inspect_components", False)
         slack_integration = config["cerberus"].get("slack_integration", False)
+        prometheus_url = config["cerberus"].get("prometheus_url", "")
+        prometheus_bearer_token = config["cerberus"].get("prometheus_bearer_token", "")
         iterations = config["tunings"].get("iterations", 0)
         sleep_time = config["tunings"].get("sleep_time", 0)
         daemon_mode = config["tunings"].get("daemon_mode", False)
@@ -226,6 +229,25 @@ def main(cfg):
 
             if cerberus_publish_status:
                 publish_cerberus_status(cerberus_status)
+
+            # Alert on high latencies
+            # Intialize prometheus client
+            if distribution == "openshift" and not prometheus_url:
+                url = runcommand.invoke(r"""oc get routes -n openshift-monitoring -o=jsonpath='{.items[?(@.metadata.name=="prometheus-k8s")].spec.host}'""") # noqa
+                prometheus_url = "https://" + url
+            if distribution == "openshift" and not prometheus_bearer_token:
+                prometheus_bearer_token = runcommand.invoke("oc -n openshift-monitoring sa get-token prometheus-k8s") # noqa
+            if prometheus_url and prometheus_bearer_token:
+                promcli.initialize_prom_client(prometheus_url, prometheus_bearer_token)
+                # Check for high latency alerts
+                query = r"""ALERTS{alertname="KubeAPILatencyHigh", severity="warning"}"""
+                metrics = promcli.get_metrics(query)
+                if metrics:
+                    logging.warning("Kubernetes API server latency is high. "
+                                     "More than 99th percentile latency for given requests to the kube-apiserver is above 1 second.\n") # noqa
+                    logging.info("%s\n" % (metrics))
+            else:
+                logging.info("Skipping the alerts check as the prometheus url and bearer token are not provided\n") # noqa
 
             # Sleep for the specified duration
             logging.info("Sleeping for the specified duration: %s\n" % (sleep_time))

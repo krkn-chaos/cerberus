@@ -35,8 +35,13 @@ cerberus:
     cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
     inspect_components: False                            # Enable it only when OpenShift client is supported to run.
                                                          # When enabled, cerberus collects logs, events and metrics of failed components
+
+    prometheus_url:                                      # The prometheus url/route is automatically obtained in case of OpenShift, please set it when the distribution is Kubernetes.
+    prometheus_bearer_token:                             # The bearer token is automatically obtained in case of OpenShift, please set it when the distribution is Kubernetes. This is needed to authenticate with prometheus.
+                                                         # This enables Cerberus to query prometheus and alert on observing high Kube API Server latencies.   
+
     slack_integration: False                             # When enabled, cerberus reports status of failed iterations in the slack channel
-                                                         # SLACK_API_TOKEN ( Bot User OAuth Access Token ) and SLACK_CHANNEL ( channel to send notifications in case of failures )
+                                                         # The following env vars need to be set: SLACK_API_TOKEN ( Bot User OAuth Access Token ) and SLACK_CHANNEL ( channel to send notifications in case of failures )
                                                          # When slack_integration is enabled, a cop can be assigned for each day. The cop of the day is tagged while reporting failures in the slack channel. Values are slack member ID's.
     cop_slack_ID:                                        # (NOTE: Defining the cop id's is optional and when the cop slack id's are not defined, the slack_team_alias tag is used if it is set else no tag is used while reporting failures in the slack channel.)
         Monday:
@@ -157,6 +162,11 @@ Please follow the instructions in the [installation](https://github.com/kubernet
 Once installed you will see node-problem-detector pods in openshift-node-problem-detector namespace. 
 Now enable openshift-node-problem-detector in the [config.yaml](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml).
 Cerberus just monitors `KernelDeadlock` condition provided by the node problem detector as it is system critical and can hinder node performance.
+
+#### Alerts
+Monitoring metrics and alerting on abnormal behavior is critical as they are the indicators for clusters health. When provided the prometheus url and bearer token in the config, Cerberus looks for KubeAPILatencyHigh alert at the end of each iteration and warns if 99th percentile latency for given requests to the kube-apiserver is above 1 second. It is the official SLI/SLO defined for Kubernetes.
+
+**NOTE**: The prometheus url and bearer token are automatically picked from the cluster if the distibution is OpenShift since it's the default metrics solution. In case of Kubernetes, they need to be provided in the config if prometheus is deployed.
 
 ### Use cases
 There can be number of use cases, here are some of them:
