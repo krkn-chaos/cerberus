@@ -55,7 +55,7 @@ tunings:
 ```
 **NOTE**: The current implementation can monitor only one cluster from one host. It can be used to monitor multiple clusters provided multiple instances of Cerberus are launched on different hosts.
 
-**NOTE**: The components especially the namespaces needs to be changed depending on the distribution i.e Kubernetes or OpenShift. The default specified in the config assumes that the distribution is OpenShift.
+**NOTE**: The components especially the namespaces needs to be changed depending on the distribution i.e Kubernetes or OpenShift. The default specified in the config assumes that the distribution is OpenShift. A config file for Kubernetes is located at config/kubernetes_config.yaml
 
 #### Run
 ```
