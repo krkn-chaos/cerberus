@@ -60,10 +60,12 @@ def main(cfg):
 
         # Cluster info
         logging.info("Fetching cluster info")
-        cluster_version = runcommand.invoke("kubectl get clusterversion")
+        if distribution == "openshift":
+            cluster_version = runcommand.invoke("kubectl get clusterversion")
+            logging.info("\n%s" % (cluster_version))
         cluster_info = runcommand.invoke("kubectl cluster-info | awk 'NR==1' | sed -r "
                                          "'s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g'")  # noqa
-        logging.info("\n%s%s" % (cluster_version, cluster_info))
+        logging.info("%s" % (cluster_info))
 
         # Run http server using a separate thread if cerberus is asked
         # to publish the status. It is served by the http server.
@@ -100,7 +102,7 @@ def main(cfg):
         # enabled or else set it to the provided iterations count in the config
         if daemon_mode:
             logging.info("Daemon mode enabled, cerberus will monitor forever")
-            logging.info("Ignoring the iterations set")
+            logging.info("Ignoring the iterations set\n")
             iterations = float('inf')
         else:
             iterations = int(iterations)
@@ -150,7 +152,7 @@ def main(cfg):
                 watch_nodes_status = True
 
             # Monitor cluster operators status
-            if watch_cluster_operators:
+            if distribution == "openshift" and watch_cluster_operators:
                 watch_co_start_time = time.time()
                 status_yaml = kubecli.get_cluster_operators()
                 watch_cluster_operators_status, failed_operators = \
@@ -159,9 +161,6 @@ def main(cfg):
                 logging.info("Iteration %s: Cluster Operator status: %s"
                              % (iteration, watch_cluster_operators_status))
             else:
-                logging.info("Cerberus is not monitoring cluster operators, "
-                             "so setting the status to True and "
-                             "assuming that the cluster operators are ready")
                 watch_cluster_operators_status = True
 
             if iteration == 1:
