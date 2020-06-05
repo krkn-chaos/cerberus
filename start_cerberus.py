@@ -183,17 +183,18 @@ def main(cfg):
 
             iter_track_time['watch_namespaces'] = time.time() - watch_namespaces_start_time
 
-            watch_routes_start_time = time.time()
             failed_routes = []
-            for route_info in watch_url_routes:
-                # Might need to get different authorization types here
-                header = {'Accept': 'application/json'}
-                if len(route_info) > 1:
-                    header['Authorization'] = route_info[1]
-                route_status = kubecli.is_url_available(route_info[0], header)
-                if not route_status:
-                    failed_routes.append(route_info[0])
-            iter_track_time['watch_routes'] = time.time() - watch_routes_start_time
+            if watch_url_routes:
+                watch_routes_start_time = time.time()
+                for route_info in watch_url_routes:
+                    # Might need to get different authorization types here
+                    header = {'Accept': 'application/json'}
+                    if len(route_info) > 1:
+                        header['Authorization'] = route_info[1]
+                    route_status = kubecli.is_url_available(route_info[0], header)
+                    if not route_status:
+                        failed_routes.append(route_info[0])
+                iter_track_time['watch_routes'] = time.time() - watch_routes_start_time
 
             # Check for the number of hits
             if cerberus_publish_status:
