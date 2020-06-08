@@ -63,6 +63,10 @@ tunings:
     sleep_time: 60                                       # Sleep duration between each iteration
     kube_api_request_chunk_size: 250                     # Large requests will be broken into the specified chunk size to reduce the load on API server and improve responsiveness.
     daemon_mode: True                                    # Iterations are set to infinity which means that the cerberus will monitor the resources forever
+
+database:
+    database_path: /tmp/cerberus.db                      # Path where cerberus database needs to be stored
+    reuse_database: False                                # When enabled, the database is reused to store the failures
 ```
 **NOTE**: watch_namespaces support regex patterns. Any valid regex pattern can be used to watch all the namespaces matching the regex pattern. For example, `^openshift-.*$` can be used to watch all namespaces that start with `openshift-` or `openshift` can be used to watch all namespaces that have `openshift` in it.
 
@@ -154,6 +158,11 @@ The user has the option to enable/disable the slack integration ( disabled by de
 
 #### Go or no-go signal
 When the cerberus is configured to run in the daemon mode, it will continuosly monitor the components specified, runs a simple http server at http://0.0.0.0:8080 and publishes the signal i.e True or False depending on the components status. The tools can consume the signal and act accordingly.
+
+#### Failures in a time window
+1. The failures in the past 1 hour can be retrieved in the json format by visiting http://0.0.0.0:8080/history.
+2. The failures in a specific time window can be retrieved in the json format by visiting http://0.0.0.0:8080/history?loopback=<interval>.
+3. The failures between two time timestamps, the failures of specific issues types and the failures related to specific components can be retrieved in the json format by visiting http://0.0.0.0:8080/analyze url. The filters have to be applied to scrape the failures accordingly.
 
 #### Node Problem Detector
 [node-problem-detector](https://github.com/kubernetes/node-problem-detector) aims to make various node problems visible to the upstream layers in cluster management stack.

@@ -169,16 +169,23 @@ def namespace_sleep_tracker(namespace):
             if "initContainerStatuses" in pod_status:
                 for container in pod_status["initContainerStatuses"]:
                     pod_restart_count += container["restartCount"]
-            if pods_tracker[pod]:
+            if pod in pods_tracker:
                 if pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp or \
                     pods_tracker[pod]["restart_count"] != pod_restart_count:
-                    crashed_restarted_pods[namespace].append(pod)
-                    pods_tracker[pod]["creation_timestamp"] = pod_creation_timestamp
-                    pods_tracker[pod]["restart_count"] = pod_restart_count
+                    pod_restart_count = max(pod_restart_count, pods_tracker[pod]["restart_count"])
+                    if pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp:
+                        crashed_restarted_pods[namespace].append((pod, "crash"))
+                    if pods_tracker[pod]["restart_count"] != pod_restart_count:
+                        restarts = pod_restart_count - pods_tracker[pod]["restart_count"]
+                        crashed_restarted_pods[namespace].append((pod, "restart", restarts))
+                    pods_tracker[pod] = {"creation_timestamp": pod_creation_timestamp,
+                                         "restart_count": pod_restart_count}
             else:
-                crashed_restarted_pods[namespace].append(pod)
-                pods_tracker[pod]["creation_timestamp"] = pod_creation_timestamp
-                pods_tracker[pod]["restart_count"] = pod_restart_count
+                crashed_restarted_pods[namespace].append((pod, "crash"))
+                if pod_restart_count != 0:
+                    crashed_restarted_pods[namespace].append((pod, "restart", pod_restart_count))
+                pods_tracker[pod] = {"creation_timestamp": pod_creation_timestamp,
+                                     "restart_count": pod_restart_count}
     return crashed_restarted_pods
 
 
