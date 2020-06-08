@@ -14,6 +14,8 @@ import cerberus.invoke.command as runcommand
 import cerberus.kubernetes.client as kubecli
 import cerberus.slack.slack_client as slackcli
 import cerberus.prometheus.client as promcli
+import cerberus.database.client as dbcli
+from datetime import datetime
 
 
 # Publish the cerberus status
@@ -47,6 +49,8 @@ def main(cfg):
         sleep_time = config["tunings"].get("sleep_time", 0)
         request_chunk_size = config["tunings"].get("kube_api_request_chunk_size", 250)
         daemon_mode = config["tunings"].get("daemon_mode", False)
+        database_path = config["database"].get("database_path", "/tmp/cerberus.db")
+        reuse_database = config["database"].get("reuse_database", False)
 
         # Initialize clients and set kube api request chunk size
         if not os.path.isfile(kubeconfig_path):
@@ -80,6 +84,11 @@ def main(cfg):
             logging.info("Publishing cerberus status at http://%s:%s"
                          % (server_address, port))
             server.start_server(address)
+
+        dbcli.set_db_path(database_path)
+        if not os.path.isfile(database_path) or not reuse_database:
+            dbcli.create_db()
+            dbcli.create_table()
 
         # Create slack WebCleint when slack intergation has been enabled
         if slack_integration:
@@ -129,6 +138,10 @@ def main(cfg):
                 if iteration == 1:
                     slackcli.slack_report_cerberus_start(cluster_info, weekday, cop_slack_member_ID)
 
+            if iteration == 1:
+                for namespace in watch_namespaces:
+                    kubecli.namespace_sleep_tracker(namespace)
+
             # Check if api server url is ok
             server_status = kubecli.is_url_available(api_server_url)
             if not server_status:
@@ -166,10 +179,6 @@ def main(cfg):
                              % (iteration, watch_cluster_operators_status))
             else:
                 watch_cluster_operators_status = True
-
-            if iteration == 1:
-                for namespace in watch_namespaces:
-                    kubecli.namespace_sleep_tracker(namespace)
 
             failed_pods_components = {}
             failed_pod_containers = {}
@@ -211,20 +220,35 @@ def main(cfg):
             if not watch_nodes_status:
                 logging.info("Iteration %s: Failed nodes" % (iteration))
                 logging.info("%s\n" % (failed_nodes))
+                dbcli.insert(datetime.now(), time.time(),
+                             1, "not ready", failed_nodes, "node")
 
             if not watch_cluster_operators_status:
                 logging.info("Iteration %s: Failed operators" % (iteration))
                 logging.info("%s\n" % (failed_operators))
+                dbcli.insert(datetime.now(), time.time(),
+                             1, "degraded", failed_operators, "cluster operator")
 
             if not server_status:
                 logging.info("Api Server is not healthy as reported by %s" % (api_server_url))
+                dbcli.insert(datetime.now(), time.time(),
+                             1, "unavailable", list(api_server_url), "api server")
 
             if not watch_namespaces_status:
                 logging.info("Iteration %s: Failed pods and components" % (iteration))
                 for namespace, failures in failed_pods_components.items():
                     logging.info("%s: %s", namespace, failures)
+
                     for pod, containers in failed_pod_containers[namespace].items():
                         logging.info("Failed containers in %s: %s", pod, containers)
+
+                    component = namespace.split("-")
+                    if component[0] == "openshift":
+                        component = "-".join(component[1:])
+                    else:
+                        component = "-".join(component)
+                    dbcli.insert(datetime.now(), time.time(),
+                                 1, "pod crash", failures, component)
                 logging.info("")
 
             # Logging the failed checking of routes
@@ -233,6 +257,8 @@ def main(cfg):
                 for route in failed_routes:
                     logging.info("Route url: %s" % route)
                 logging.info("")
+                dbcli.insert(datetime.now(), time.time(),
+                             1, "unavailable", failed_routes, "route")
 
             # Report failures in a slack channel
             if not watch_nodes_status or not watch_namespaces_status or \
@@ -289,7 +315,20 @@ def main(cfg):
                 logging.info("Pods that were crashed/restarted during the sleep interval of "
                              "iteration %s" % (iteration))
                 for namespace, pods in crashed_restarted_pods.items():
-                    logging.info("%s: %s" % (namespace, pods))
+                    distinct_pods = set(pod[0] for pod in pods)
+                    logging.info("%s: %s" % (namespace, distinct_pods))
+                    component = namespace.split("-")
+                    if component[0] == "openshift":
+                        component = "-".join(component[1:])
+                    else:
+                        component = "-".join(component)
+                    for pod in pods:
+                        if pod[1] == "crash":
+                            dbcli.insert(datetime.now(), time.time(),
+                                         1, "pod crash", [pod[0]], component)
+                        elif pod[1] == "restart":
+                            dbcli.insert(datetime.now(), time.time(),
+                                         pod[2], "pod restart", [pod[0]], component)
                 logging.info("")
 
             # Capture total time taken by the iteration
