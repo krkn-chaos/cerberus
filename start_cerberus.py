@@ -329,4 +329,7 @@ if __name__ == "__main__":
         logging.error("Please check if you have passed the config")
         sys.exit(1)
     else:
-        main(options.cfg)
+        try:
+            main(options.cfg)
+        except KeyboardInterrupt:
+            logging.info("Terminating cerberus monitoring")
