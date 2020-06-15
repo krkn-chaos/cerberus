@@ -98,6 +98,12 @@ def main(cfg):
         # Initialize the start iteration to 0
         iteration = 0
 
+        # Initialize the prometheus client
+        promcli.initialize_prom_client(distribution, prometheus_url, prometheus_bearer_token)
+
+        # Prometheus query to alert on high latencies
+        alerts_query = r"""ALERTS{alertname="KubeAPILatencyHigh", severity="warning"}"""
+
         # Set the number of iterations to loop to infinity if daemon mode is
         # enabled or else set it to the provided iterations count in the config
         if daemon_mode:
@@ -254,23 +260,12 @@ def main(cfg):
                 publish_cerberus_status(cerberus_status)
 
             # Alert on high latencies
-            # Intialize prometheus client
-            if distribution == "openshift" and not prometheus_url:
-                url = runcommand.invoke(r"""oc get routes -n openshift-monitoring -o=jsonpath='{.items[?(@.metadata.name=="prometheus-k8s")].spec.host}'""") # noqa
-                prometheus_url = "https://" + url
-            if distribution == "openshift" and not prometheus_bearer_token:
-                prometheus_bearer_token = runcommand.invoke("oc -n openshift-monitoring sa get-token prometheus-k8s") # noqa
-            if prometheus_url and prometheus_bearer_token:
-                promcli.initialize_prom_client(prometheus_url, prometheus_bearer_token)
-                # Check for high latency alerts
-                query = r"""ALERTS{alertname="KubeAPILatencyHigh", severity="warning"}"""
-                metrics = promcli.get_metrics(query)
-                if metrics:
-                    logging.warning("Kubernetes API server latency is high. "
-                                     "More than 99th percentile latency for given requests to the kube-apiserver is above 1 second.\n") # noqa
-                    logging.info("%s\n" % (metrics))
-            else:
-                logging.info("Skipping the alerts check as the prometheus url and bearer token are not provided\n") # noqa
+            metrics = promcli.process_prom_query(alerts_query)
+            if metrics:
+                logging.warning("Kubernetes API server latency is high. "
+                                "More than 99th percentile latency for given requests to the "
+                                "kube-apiserver is above 1 second.\n")
+                logging.info("%s\n" % (metrics))
 
             # Sleep for the specified duration
             logging.info("Sleeping for the specified duration: %s\n" % (sleep_time))
@@ -278,8 +273,12 @@ def main(cfg):
 
             crashed_restarted_pods = defaultdict(list)
 
+            sleep_tracker_start_time = time.time()
+
             for namespace in watch_namespaces:
                 crashed_restarted_pods.update(kubecli.namespace_sleep_tracker(namespace))
+
+            iter_track_time['sleep_tracker'] = time.time() - sleep_tracker_start_time
 
             if crashed_restarted_pods:
                 logging.info("Pods that were crashed/restarted during the sleep interval of "
