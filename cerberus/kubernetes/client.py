@@ -199,7 +199,11 @@ def check_master_taint(master_nodes):
     schedulable_masters = []
     all_master_info = runcommand.invoke("kubectl get nodes " + " ".join(master_nodes) + " -o json")
     all_master_info = json.loads(all_master_info)
-    for node_info in all_master_info["items"]:
+    if len(master_nodes) > 1:
+        all_master_info = all_master_info["items"]
+    else:
+        all_master_info = [all_master_info]
+    for node_info in all_master_info:
         node = node_info["metadata"]["name"]
         NoSchedule_taint = False
         try:
