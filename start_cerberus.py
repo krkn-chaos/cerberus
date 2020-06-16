@@ -45,13 +45,14 @@ def main(cfg):
         prometheus_bearer_token = config["cerberus"].get("prometheus_bearer_token", "")
         iterations = config["tunings"].get("iterations", 0)
         sleep_time = config["tunings"].get("sleep_time", 0)
+        request_chunk_size = config["tunings"].get("kube_api_request_chunk_size", 250)
         daemon_mode = config["tunings"].get("daemon_mode", False)
 
-        # Initialize clients
+        # Initialize clients and set kube api request chunk size
         if not os.path.isfile(kubeconfig_path):
             kubeconfig_path = None
         logging.info("Initializing client to talk to the Kubernetes cluster")
-        kubecli.initialize_clients(kubeconfig_path)
+        kubecli.initialize_clients(kubeconfig_path, request_chunk_size)
 
         if "openshift-sdn" in watch_namespaces:
             sdn_namespace = kubecli.check_sdn_namespace()

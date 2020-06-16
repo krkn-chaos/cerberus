@@ -7,16 +7,18 @@ from kubernetes import client, config
 import cerberus.invoke.command as runcommand
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import InsecureRequestWarning
-
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
 pods_tracker = defaultdict(dict)
 
 
 # Load kubeconfig and initialize kubernetes python client
-def initialize_clients(kubeconfig_path):
+def initialize_clients(kubeconfig_path, chunk_size):
     global cli
+    global request_chunk_size
     config.load_kube_config(kubeconfig_path)
     cli = client.CoreV1Api()
+    request_chunk_size = str(chunk_size)
 
 
 # List nodes in the cluster
@@ -63,18 +65,25 @@ def get_pod_status(pod, namespace):
                       CoreV1Api->read_namespaced_pod_status: %s\n" % e)
 
 
+# Outputs a json blob with informataion about all pods in a given namespace
 def get_all_pod_info(namespace):
-    all_pod_info = runcommand.invoke("kubectl get pods -n " + namespace + " -o json")
+    all_pod_info = runcommand.invoke("kubectl get pods --chunk-size " + request_chunk_size + " -n " + namespace + " -o json") # noqa
     all_pod_info = json.loads(all_pod_info)
     return all_pod_info
+
+
+# Outputs a json blob with information about all the nodes
+def get_all_nodes_info():
+    nodes_info = runcommand.invoke("kubectl get nodes --chunk-size " + request_chunk_size + " -o json") # noqa
+    nodes_info = json.loads(nodes_info)
+    return nodes_info
 
 
 # Monitor the status of the cluster nodes and set the status to true or false
 def monitor_nodes():
     notready_nodes = []
-    all_node_info = runcommand.invoke("kubectl get nodes -o json")
-    all_node_info = json.loads(all_node_info)
-    for node_info in all_node_info["items"]:
+    all_nodes_info = get_all_nodes_info()
+    for node_info in all_nodes_info["items"]:
         node = node_info["metadata"]["name"]
         node_kerneldeadlock_status = "False"
         for condition in node_info["status"]["conditions"]:

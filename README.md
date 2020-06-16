@@ -60,6 +60,7 @@ cerberus:
 tunings:
     iterations: 5                                        # Iterations to loop before stopping the watch, it will be replaced with infinity when the daemon mode is enabled
     sleep_time: 60                                       # Sleep duration between each iteration
+    kube_api_request_chunk_size: 250                     # Large requests will be broken into the specified chunk size to reduce the load on API server and improve responsiveness.
     daemon_mode: True                                    # Iterations are set to infinity which means that the cerberus will monitor the resources forever
 ```
 **NOTE**: The current implementation can monitor only one cluster from one host. It can be used to monitor multiple clusters provided multiple instances of Cerberus are launched on different hosts.
