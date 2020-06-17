@@ -4,6 +4,7 @@ import os
 import sys
 import yaml
 import time
+import json
 import logging
 import optparse
 import pyfiglet
@@ -20,6 +21,22 @@ import cerberus.prometheus.client as promcli
 def publish_cerberus_status(status):
     with open('/tmp/cerberus_status', 'w+') as file:
         file.write(str(status))
+
+
+# Create a json file of operation timings
+def record_time(time_tracker):
+    if time_tracker:
+        average = defaultdict(float)
+        for check in time_tracker["Iteration 1"]:
+            iterations = 0
+            for values in time_tracker.values():
+                if check in values:
+                    average[check] += values[check]
+                    iterations += 1
+            average[check] /= iterations
+        time_tracker["Average"] = average
+    with open('./time_tracker.json', 'w+') as file:
+        json.dump(time_tracker, file, indent=4, separators=(',', ': '))
 
 
 # Main function
@@ -98,6 +115,10 @@ def main(cfg):
 
         # Counter for if api server is not ok
         api_fail_count = 0
+
+        # Track time taken for different checks in each iteration
+        global time_tracker
+        time_tracker = {}
 
         # Initialize the start iteration to 0
         iteration = 0
@@ -295,6 +316,8 @@ def main(cfg):
             # Capture total time taken by the iteration
             iter_track_time['entire_iteration'] = (time.time() - iteration_start_time) - sleep_time  # noqa
 
+            time_tracker["Iteration " + str(iteration)] = iter_track_time
+
             # Print the captured timing for each operation
             logging.info("-------------------------- Iteration Stats ---------------------------")
             for operation, timing in iter_track_time.items():
@@ -305,6 +328,7 @@ def main(cfg):
         else:
             logging.info("Completed watching for the specified number of iterations: %s"
                          % (iterations))
+            record_time(time_tracker)
     else:
         logging.error("Could not find a config at %s, please check" % (cfg))
         sys.exit(1)
@@ -335,4 +359,5 @@ if __name__ == "__main__":
         try:
             main(options.cfg)
         except KeyboardInterrupt:
+            record_time(time_tracker)
             logging.info("Terminating cerberus monitoring")

@@ -62,6 +62,28 @@ do
   cat $test_dir/ci_results >> ci_results
 done
 
+if [[ -d "test_daemon_disabled" ]]; then
+  echo "" >> results.markdown
+  echo 'Check | Gold time (s) | PR time (s) | % Change' >> results.markdown
+  echo '------|---------------|-------------|---------' >> results.markdown
+  checks_in_pr=`jq '.Average | keys | .[]' test_daemon_disabled/time_tracker.json`
+  checks_in_master=`jq '.Average | keys | .[]' time_tracker.json`
+  for check in $checks_in_pr; do
+    pr_time=$(jq -r ".Average[$check]" test_daemon_disabled/time_tracker.json);
+    if [[ `echo $checks_in_master | grep -w $check` ]];
+    then
+      gold_time=$(jq -r ".Average[$check]" time_tracker.json);
+      delta=$(bc -l <<<"scale=2; (${pr_time}-${gold_time})/(${gold_time}*0.01)")
+      gold_time=$(bc -l <<<"scale=6; ${gold_time}/1")
+      pr_time=$(bc -l <<<"scale=6; ${pr_time}/1")
+      echo "$check | $gold_time | $pr_time | $delta" >> results.markdown
+    else
+      pr_time=$(bc -l <<<"scale=6; ${pr_time}/1")
+      echo "$check | | $pr_time | " >> results.markdown
+    fi
+  done
+fi
+
 # Get number of successes/failures
 testcount=`wc -l ci_results`
 success=`grep Successful ci_results | awk -F ":" '{print $1}'`
