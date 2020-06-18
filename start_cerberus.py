@@ -54,6 +54,9 @@ def main(cfg):
         logging.info("Initializing client to talk to the Kubernetes cluster")
         kubecli.initialize_clients(kubeconfig_path, request_chunk_size)
 
+        # Check if all the namespaces under watch_namespaces are valid
+        kubecli.check_namespaces(watch_namespaces)
+
         if "openshift-sdn" in watch_namespaces:
             sdn_namespace = kubecli.check_sdn_namespace()
             watch_namespaces = [namespace.replace('openshift-sdn', sdn_namespace)

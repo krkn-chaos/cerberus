@@ -1,3 +1,4 @@
+import sys
 import yaml
 import json
 import logging
@@ -36,14 +37,6 @@ def list_nodes(label_selector=None):
     return nodes
 
 
-def get_node_info(node):
-    try:
-        return cli.read_node_status(node, pretty=True)
-    except ApiException as e:
-        logging.error("Exception when calling \
-                       CoreV1Api->read_node_status: %s\n" % e)
-
-
 # List pods in the given namespace
 def list_pods(namespace):
     pods = []
@@ -57,12 +50,42 @@ def list_pods(namespace):
     return pods
 
 
+# List all namespaces
+def list_namespaces():
+    namespaces = []
+    try:
+        ret = cli.list_namespace(pretty=True)
+    except ApiException as e:
+        logging.error("Exception when calling \
+                       CoreV1Api->list_namespaced_pod: %s\n" % e)
+    for namespace in ret.items:
+        namespaces.append(namespace.metadata.name)
+    return namespaces
+
+
+# Get node status
+def get_node_info(node):
+    try:
+        return cli.read_node_status(node, pretty=True)
+    except ApiException as e:
+        logging.error("Exception when calling \
+                       CoreV1Api->read_node_status: %s\n" % e)
+
+
+# Get status of a pod in a namespace
 def get_pod_status(pod, namespace):
     try:
         return cli.read_namespaced_pod_status(pod, namespace, pretty=True)
     except ApiException as e:
         logging.error("Exception when calling \
                       CoreV1Api->read_namespaced_pod_status: %s\n" % e)
+
+
+# Outputs a json blob with information about all the nodes
+def get_all_nodes_info():
+    nodes_info = runcommand.invoke("kubectl get nodes --chunk-size " + request_chunk_size + " -o json") # noqa
+    nodes_info = json.loads(nodes_info)
+    return nodes_info
 
 
 # Outputs a json blob with informataion about all pods in a given namespace
@@ -72,11 +95,27 @@ def get_all_pod_info(namespace):
     return all_pod_info
 
 
-# Outputs a json blob with information about all the nodes
-def get_all_nodes_info():
-    nodes_info = runcommand.invoke("kubectl get nodes --chunk-size " + request_chunk_size + " -o json") # noqa
-    nodes_info = json.loads(nodes_info)
-    return nodes_info
+# Check if all the watch_namespaces are valid
+def check_namespaces(watch_namespaces):
+    try:
+        invalid_namespaces = set(watch_namespaces) - set(list_namespaces())
+        if invalid_namespaces:
+            raise Exception("Following namespaces do not exist: %s" % (invalid_namespaces))
+    except Exception as e:
+        logging.info("%s" % (e))
+        sys.exit(1)
+
+
+# Check the namespace name for default SDN
+def check_sdn_namespace():
+    namespaces = list_namespaces()
+    if "openshift-ovn-kubernetes" in namespaces:
+        return "openshift-ovn-kubernetes"
+    if "openshift-sdn" in namespaces:
+        return "openshift-sdn"
+    logging.error("Could not find openshift-sdn and openshift-ovn-kubernetes namespaces, "
+                  "please specify the correct networking namespace in config file")
+    sys.exit(1)
 
 
 # Monitor the status of the cluster nodes and set the status to true or false
@@ -97,19 +136,6 @@ def monitor_nodes():
             notready_nodes.append(node)
     status = False if notready_nodes else True
     return status, notready_nodes
-
-
-# Check the namespace name for default SDN
-def check_sdn_namespace():
-    for item in cli.list_namespace().items:
-        if item.metadata.name == "openshift-ovn-kubernetes":
-            return "openshift-ovn-kubernetes"
-        elif item.metadata.name == "openshift-sdn":
-            return "openshift-sdn"
-        else:
-            continue
-    logging.error("Could not find openshift-sdn and openshift-ovn-kubernetes namespaces, "
-                  "please specify the correct networking namespace in config file")
 
 
 # Track the pods that were crashed/restarted during the sleep interval of an iteration

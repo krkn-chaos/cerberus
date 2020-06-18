@@ -31,7 +31,7 @@ cerberus:
         -    openshift-apiserver
         -    openshift-kube-apiserver
         -    openshift-monitoring
-        -    openshift-kube-controller
+        -    openshift-kube-controller-manager
         -    openshift-machine-api
         -    openshift-kube-scheduler
         -    openshift-ingress
