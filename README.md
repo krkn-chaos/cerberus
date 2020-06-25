@@ -63,6 +63,8 @@ tunings:
     kube_api_request_chunk_size: 250                     # Large requests will be broken into the specified chunk size to reduce the load on API server and improve responsiveness.
     daemon_mode: True                                    # Iterations are set to infinity which means that the cerberus will monitor the resources forever
 ```
+**NOTE**: watch_namespaces support regex patterns. Any valid regex pattern can be used to watch all the namespaces matching the regex pattern. For example, `^openshift-.*$` can be used to watch all namespaces that start with `openshift-` or `openshift` can be used to watch all namespaces that have `openshift` in it.
+
 **NOTE**: The current implementation can monitor only one cluster from one host. It can be used to monitor multiple clusters provided multiple instances of Cerberus are launched on different hosts.
 
 **NOTE**: The components especially the namespaces needs to be changed depending on the distribution i.e Kubernetes or OpenShift. The default specified in the config assumes that the distribution is OpenShift. A config file for Kubernetes is located at config/kubernetes_config.yaml

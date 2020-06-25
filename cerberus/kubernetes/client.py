@@ -1,3 +1,4 @@
+import re
 import sys
 import yaml
 import json
@@ -96,11 +97,23 @@ def get_all_pod_info(namespace):
 
 
 # Check if all the watch_namespaces are valid
-def check_namespaces(watch_namespaces):
+def check_namespaces(namespaces):
     try:
-        invalid_namespaces = set(watch_namespaces) - set(list_namespaces())
+        valid_namespaces = list_namespaces()
+        regex_namespaces = set(namespaces) - set(valid_namespaces)
+        final_namespaces = set(namespaces) - set(regex_namespaces)
+        valid_regex = set()
+        if regex_namespaces:
+            for namespace in valid_namespaces:
+                for regex_namespace in regex_namespaces:
+                    if re.search(regex_namespace, namespace):
+                        final_namespaces.add(namespace)
+                        valid_regex.add(regex_namespace)
+                        break
+        invalid_namespaces = regex_namespaces - valid_regex
         if invalid_namespaces:
-            raise Exception("Following namespaces do not exist: %s" % (invalid_namespaces))
+            raise Exception("There exists no namespaces matching: %s" % (invalid_namespaces))
+        return list(final_namespaces)
     except Exception as e:
         logging.info("%s" % (e))
         sys.exit(1)
