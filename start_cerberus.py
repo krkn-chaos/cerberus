@@ -51,6 +51,7 @@ def main(cfg):
             config = yaml.full_load(f)
         distribution = config["cerberus"].get("distribution", "openshift").lower()
         kubeconfig_path = config["cerberus"].get("kubeconfig_path", "")
+        port = config["cerberus"].get("port", 8080)
         watch_nodes = config["cerberus"].get("watch_nodes", False)
         watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", False)
         watch_namespaces = config["cerberus"].get("watch_namespaces", [])
@@ -91,7 +92,10 @@ def main(cfg):
         # Run http server using a separate thread if cerberus is asked
         # to publish the status. It is served by the http server.
         if cerberus_publish_status:
-            address = ("0.0.0.0", 8080)
+            if not 0 <= port <= 65535:
+                logging.info("Using port 8080 as %s isn't a valid port number" % (port))
+                port = 8080
+            address = ("0.0.0.0", port)
             server_address = address[0]
             port = address[1]
             logging.info("Publishing cerberus status at http://%s:%s"
