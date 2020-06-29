@@ -10,8 +10,10 @@ import logging
 import optparse
 import pyfiglet
 import functools
+import importlib
 import multiprocessing
 from itertools import repeat
+from datetime import datetime
 from collections import defaultdict
 import cerberus.server.server as server
 import cerberus.inspect.inspect as inspect
@@ -20,7 +22,6 @@ import cerberus.kubernetes.client as kubecli
 import cerberus.slack.slack_client as slackcli
 import cerberus.prometheus.client as promcli
 import cerberus.database.client as dbcli
-from datetime import datetime
 
 
 def smap(f):
@@ -75,6 +76,7 @@ def main(cfg):
         slack_integration = config["cerberus"].get("slack_integration", False)
         prometheus_url = config["cerberus"].get("prometheus_url", "")
         prometheus_bearer_token = config["cerberus"].get("prometheus_bearer_token", "")
+        custom_checks = config["cerberus"].get("custom_checks", [])
         iterations = config["tunings"].get("iterations", 0)
         sleep_time = config["tunings"].get("sleep_time", 0)
         request_chunk_size = config["tunings"].get("kube_api_request_chunk_size", 250)
@@ -276,13 +278,36 @@ def main(cfg):
                     logging.info("")
 
                 # Logging the failed checking of routes
+                watch_routes_status = True
                 if failed_routes:
+                    watch_routes_status = False
                     logging.info("Iteration %s: Failed route monitoring" % iteration)
                     for route in failed_routes:
                         logging.info("Route url: %s" % route)
                     logging.info("")
                     dbcli.insert(datetime.now(), time.time(),
                                  1, "unavailable", failed_routes, "route")
+
+                # Aggregate the status and publish it
+                cerberus_status = watch_nodes_status and watch_namespaces_status \
+                    and watch_cluster_operators_status and server_status \
+                    and watch_routes_status
+
+                if custom_checks:
+                    if iteration == 1:
+                        custom_checks_imports = []
+                        for check in custom_checks:
+                            my_check = ".".join(check.replace("/", ".").split(".")[:-1])
+                            my_check_module = importlib.import_module(my_check)
+                            custom_checks_imports.append(my_check_module)
+
+                    for check in custom_checks_imports:
+                        check_returns = check.main()
+                        if type(check_returns) == bool:
+                            cerberus_status = cerberus_status and check_returns
+
+                if cerberus_publish_status:
+                    publish_cerberus_status(cerberus_status)
 
                 # Report failures in a slack channel
                 if not watch_nodes_status or not watch_namespaces_status or \
@@ -302,13 +327,6 @@ def main(cfg):
                 elif distribution == "kubernetes" and inspect_components:
                     logging.info("Skipping the failed components inspection as "
                                  "it's specific to OpenShift")
-
-                # Aggregate the status and publish it
-                cerberus_status = watch_nodes_status and watch_namespaces_status \
-                    and watch_cluster_operators_status and server_status
-
-                if cerberus_publish_status:
-                    publish_cerberus_status(cerberus_status)
 
                 # Alert on high latencies
                 metrics = promcli.process_prom_query(alerts_query)
