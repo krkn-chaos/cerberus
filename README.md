@@ -58,6 +58,10 @@ cerberus:
         Sunday:
     slack_team_alias:                                    # The slack team alias to be tagged while reporting failures in the slack channel when no cop is assigned
 
+    custom_checks:                                       # Relative paths of files conataining additional user defined checks
+        -   custom_checks/custom_check_sample.py
+        -   custom_check.py
+
 tunings:
     iterations: 5                                        # Iterations to loop before stopping the watch, it will be replaced with infinity when the daemon mode is enabled
     sleep_time: 60                                       # Sleep duration between each iteration
@@ -183,6 +187,9 @@ Please follow the instructions in the [installation](https://github.com/kubernet
 Once installed you will see node-problem-detector pods in openshift-node-problem-detector namespace. 
 Now enable openshift-node-problem-detector in the [config.yaml](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml).
 Cerberus just monitors `KernelDeadlock` condition provided by the node problem detector as it is system critical and can hinder node performance.
+
+#### Custom checks
+You can bring in additional checks to monitor components that are not being monitored by Cerberus. This can be accomplished by placing relative paths of files containing additional checks under custom_checks in config file. All the checks should be placed within the main function of the file. If the additional checks need to be considered in determining the go/no-go signal of Cerberus, the main function can return a boolean value for the same. However, it's optional to return a value. Refer to [example_check](https://github.com/openshift-scale/cerberus/blob/master/custom_checks/custom_check_sample.py) for an example custom check file.
 
 #### Alerts
 Monitoring metrics and alerting on abnormal behavior is critical as they are the indicators for clusters health. When provided the prometheus url and bearer token in the config, Cerberus looks for KubeAPILatencyHigh alert at the end of each iteration and warns if 99th percentile latency for given requests to the kube-apiserver is above 1 second. It is the official SLI/SLO defined for Kubernetes.
