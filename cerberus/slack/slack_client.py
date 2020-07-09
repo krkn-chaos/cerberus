@@ -1,6 +1,7 @@
 import os
 import slack
 import logging
+import datetime
 import cerberus.invoke.command as runcommand
 
 
@@ -69,8 +70,10 @@ def slack_logging(cluster_info, iteration, watch_nodes_status, failed_nodes,
     if not watch_namespaces_status:
         issues.append("*namespaces: " + ", ".join(list(failed_pods_components.keys())) + "*")
     issues = "\n".join(issues)
-    post_message_in_slack(slack_tag + " %sIn iteration %d, Cerberus "
+    post_message_in_slack(slack_tag + " %sIn iteration %d at %s, Cerberus "
                           "found issues in: \n%s \nHence, setting the "
                           "go/no-go signal to false. \nThe full report "
                           "is at *%s* on the host cerberus is running."
-                          % (cluster_info, iteration, issues, cerberus_report_path))
+                          % (cluster_info, iteration,
+                              datetime.datetime.now().replace(microsecond=0).isoformat(),
+                              issues, cerberus_report_path))
