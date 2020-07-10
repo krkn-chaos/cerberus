@@ -172,203 +172,221 @@ def main(cfg):
 
         # Loop to run the components status checks starts here
         while (int(iteration) < iterations):
+            try:
+                # Initialize a dict to store the operations timings per iteration
+                iter_track_time = manager.dict()
 
-            # Initialize a dict to store the operations timings per iteration
-            iter_track_time = manager.dict()
+                # Capture the start time
+                iteration_start_time = time.time()
 
-            # Capture the start time
-            iteration_start_time = time.time()
+                iteration += 1
 
-            iteration += 1
-
-            # Read the config for info when slack integration is enabled
-            if slack_integration:
-                weekday = runcommand.invoke("date '+%A'")[:-1]
-                cop_slack_member_ID = config["cerberus"]["cop_slack_ID"].get(weekday, None)
-                slack_team_alias = config["cerberus"].get("slack_team_alias", None)
-                slackcli.slack_tagging(cop_slack_member_ID, slack_team_alias)
-
-                if iteration == 1:
-                    slackcli.slack_report_cerberus_start(cluster_info, weekday, cop_slack_member_ID)
-
-            # Collect the initial creation_timestamp and restart_count of all the pods in all
-            # the namespaces in watch_namespaces
-            if iteration == 1:
-                pods_tracker = manager.dict()
-                pool.starmap(kubecli.namespace_sleep_tracker,
-                             zip(watch_namespaces, repeat(pods_tracker)))
-
-            # Execute the functions to check api_server_status, master_schedulable_status,
-            # watch_nodes, watch_cluster_operators parallely
-            (server_status), (schedulable_masters), (watch_nodes_status, failed_nodes), \
-                (watch_cluster_operators_status, failed_operators), (failed_routes) = \
-                pool.map(smap, [functools.partial(kubecli.is_url_available, api_server_url),
-                                functools.partial(kubecli.process_master_taint,
-                                                  master_nodes, iteration, iter_track_time),
-                                functools.partial(kubecli.process_nodes, watch_nodes,
-                                                  iteration, iter_track_time),
-                                functools.partial(kubecli.process_cluster_operator,
-                                                  distribution, watch_cluster_operators,
-                                                  iteration, iter_track_time),
-                                functools.partial(kubecli.process_routes, watch_url_routes,
-                                                  iter_track_time)])
-
-            # Increment api_fail_count if api server url is not ok
-            if not server_status:
-                api_fail_count += 1
-
-            # Initialize a shared_memory of type dict to share data between different processes
-            failed_pods_components = manager.dict()
-            failed_pod_containers = manager.dict()
-
-            # Monitor all the namespaces parallely
-            watch_namespaces_start_time = time.time()
-            pool.starmap(kubecli.process_namespace, zip(repeat(iteration), watch_namespaces,
-                         repeat(failed_pods_components), repeat(failed_pod_containers)))
-
-            watch_namespaces_status = False if failed_pods_components else True
-            iter_track_time['watch_namespaces'] = time.time() - watch_namespaces_start_time
-
-            # Check for the number of hits
-            if cerberus_publish_status:
-                logging.info("HTTP requests served: %s \n"
-                             % (server.SimpleHTTPRequestHandler.requests_served))
-
-            if schedulable_masters:
-                logging.warning("Iteration %s: Masters without NoSchedule taint: %s\n"
-                                % (iteration, schedulable_masters))
-
-            # Logging the failed components
-            if not watch_nodes_status:
-                logging.info("Iteration %s: Failed nodes" % (iteration))
-                logging.info("%s\n" % (failed_nodes))
-                dbcli.insert(datetime.now(), time.time(),
-                             1, "not ready", failed_nodes, "node")
-
-            if not watch_cluster_operators_status:
-                logging.info("Iteration %s: Failed operators" % (iteration))
-                logging.info("%s\n" % (failed_operators))
-                dbcli.insert(datetime.now(), time.time(),
-                             1, "degraded", failed_operators, "cluster operator")
-
-            if not server_status:
-                logging.info("Iteration %s: Api Server is not healthy as reported by %s\n"
-                             % (iteration, api_server_url))
-                dbcli.insert(datetime.now(), time.time(),
-                             1, "unavailable", list(api_server_url), "api server")
-
-            if not watch_namespaces_status:
-                logging.info("Iteration %s: Failed pods and components" % (iteration))
-                for namespace, failures in failed_pods_components.items():
-                    logging.info("%s: %s", namespace, failures)
-
-                    for pod, containers in failed_pod_containers[namespace].items():
-                        logging.info("Failed containers in %s: %s", pod, containers)
-
-                    component = namespace.split("-")
-                    if component[0] == "openshift":
-                        component = "-".join(component[1:])
-                    else:
-                        component = "-".join(component)
-                    dbcli.insert(datetime.now(), time.time(),
-                                 1, "pod crash", failures, component)
-                logging.info("")
-
-            # Logging the failed checking of routes
-            if failed_routes:
-                logging.info("Iteration %s: Failed route monitoring" % iteration)
-                for route in failed_routes:
-                    logging.info("Route url: %s" % route)
-                logging.info("")
-                dbcli.insert(datetime.now(), time.time(),
-                             1, "unavailable", failed_routes, "route")
-
-            # Report failures in a slack channel
-            if not watch_nodes_status or not watch_namespaces_status or \
-                    not watch_cluster_operators_status:
+                # Read the config for info when slack integration is enabled
                 if slack_integration:
-                    slackcli.slack_logging(cluster_info, iteration, watch_nodes_status,
-                                           failed_nodes, watch_cluster_operators_status,
-                                           failed_operators, watch_namespaces_status,
-                                           failed_pods_components)
+                    weekday = runcommand.invoke("date '+%A'")[:-1]
+                    cop_slack_member_ID = config["cerberus"]["cop_slack_ID"].get(weekday, None)
+                    slack_team_alias = config["cerberus"].get("slack_team_alias", None)
+                    slackcli.slack_tagging(cop_slack_member_ID, slack_team_alias)
 
-            # Run inspection only when the distribution is openshift
-            if distribution == "openshift" and inspect_components:
-                # Collect detailed logs for all the namespaces with failed
-                # components parallely
-                pool.map(inspect.inspect_component, failed_pods_components.keys())
-                logging.info("")
-            elif distribution == "kubernetes" and inspect_components:
-                logging.info("Skipping the failed components inspection as "
-                             "it's specific to OpenShift")
+                    if iteration == 1:
+                        slackcli.slack_report_cerberus_start(cluster_info, weekday,
+                                                             cop_slack_member_ID)
 
-            # Aggregate the status and publish it
-            cerberus_status = watch_nodes_status and watch_namespaces_status \
-                and watch_cluster_operators_status and server_status
+                # Collect the initial creation_timestamp and restart_count of all the pods in all
+                # the namespaces in watch_namespaces
+                if iteration == 1:
+                    pods_tracker = manager.dict()
+                    pool.starmap(kubecli.namespace_sleep_tracker,
+                                 zip(watch_namespaces, repeat(pods_tracker)))
 
-            if cerberus_publish_status:
-                publish_cerberus_status(cerberus_status)
+                # Execute the functions to check api_server_status, master_schedulable_status,
+                # watch_nodes, watch_cluster_operators parallely
+                (server_status), (schedulable_masters), (watch_nodes_status, failed_nodes), \
+                    (watch_cluster_operators_status, failed_operators), (failed_routes) = \
+                    pool.map(smap, [functools.partial(kubecli.is_url_available, api_server_url),
+                                    functools.partial(kubecli.process_master_taint,
+                                                      master_nodes, iteration, iter_track_time),
+                                    functools.partial(kubecli.process_nodes, watch_nodes,
+                                                      iteration, iter_track_time),
+                                    functools.partial(kubecli.process_cluster_operator,
+                                                      distribution, watch_cluster_operators,
+                                                      iteration, iter_track_time),
+                                    functools.partial(kubecli.process_routes, watch_url_routes,
+                                                      iter_track_time)])
 
-            # Alert on high latencies
-            metrics = promcli.process_prom_query(alerts_query)
-            if metrics:
-                logging.warning("Kubernetes API server latency is high. "
-                                "More than 99th percentile latency for given requests to the "
-                                "kube-apiserver is above 1 second.\n")
-                logging.info("%s\n" % (metrics))
+                # Increment api_fail_count if api server url is not ok
+                if not server_status:
+                    api_fail_count += 1
 
-            # Sleep for the specified duration
-            logging.info("Sleeping for the specified duration: %s\n" % (sleep_time))
-            time.sleep(float(sleep_time))
+                # Initialize a shared_memory of type dict to share data between different processes
+                failed_pods_components = manager.dict()
+                failed_pod_containers = manager.dict()
 
-            sleep_tracker_start_time = time.time()
+                # Monitor all the namespaces parallely
+                watch_namespaces_start_time = time.time()
+                pool.starmap(kubecli.process_namespace, zip(repeat(iteration), watch_namespaces,
+                             repeat(failed_pods_components), repeat(failed_pod_containers)))
 
-            # Track pod crashes/restarts during the sleep interval in all namespaces parallely
-            multiprocessed_output = pool.starmap(kubecli.namespace_sleep_tracker,
-                                                 zip(watch_namespaces, repeat(pods_tracker)))
+                watch_namespaces_status = False if failed_pods_components else True
+                iter_track_time['watch_namespaces'] = time.time() - watch_namespaces_start_time
 
-            crashed_restarted_pods = {}
-            for item in multiprocessed_output:
-                crashed_restarted_pods.update(item)
+                # Check for the number of hits
+                if cerberus_publish_status:
+                    logging.info("HTTP requests served: %s \n"
+                                 % (server.SimpleHTTPRequestHandler.requests_served))
 
-            iter_track_time['sleep_tracker'] = time.time() - sleep_tracker_start_time
+                if schedulable_masters:
+                    logging.warning("Iteration %s: Masters without NoSchedule taint: %s\n"
+                                    % (iteration, schedulable_masters))
 
-            if crashed_restarted_pods:
-                logging.info("Pods that were crashed/restarted during the sleep interval of "
-                             "iteration %s" % (iteration))
-                for namespace, pods in crashed_restarted_pods.items():
-                    distinct_pods = set(pod[0] for pod in pods)
-                    logging.info("%s: %s" % (namespace, distinct_pods))
-                    component = namespace.split("-")
-                    if component[0] == "openshift":
-                        component = "-".join(component[1:])
-                    else:
-                        component = "-".join(component)
-                    for pod in pods:
-                        if pod[1] == "crash":
-                            dbcli.insert(datetime.now(), time.time(),
-                                         1, "pod crash", [pod[0]], component)
-                        elif pod[1] == "restart":
-                            dbcli.insert(datetime.now(), time.time(),
-                                         pod[2], "pod restart", [pod[0]], component)
-                logging.info("")
+                # Logging the failed components
+                if not watch_nodes_status:
+                    logging.info("Iteration %s: Failed nodes" % (iteration))
+                    logging.info("%s\n" % (failed_nodes))
+                    dbcli.insert(datetime.now(), time.time(),
+                                 1, "not ready", failed_nodes, "node")
 
-            # Capture total time taken by the iteration
-            iter_track_time['entire_iteration'] = (time.time() - iteration_start_time) - sleep_time  # noqa
+                if not watch_cluster_operators_status:
+                    logging.info("Iteration %s: Failed operators" % (iteration))
+                    logging.info("%s\n" % (failed_operators))
+                    dbcli.insert(datetime.now(), time.time(),
+                                 1, "degraded", failed_operators, "cluster operator")
 
-            time_tracker["Iteration " + str(iteration)] = iter_track_time.copy()
+                if not server_status:
+                    logging.info("Iteration %s: Api Server is not healthy as reported by %s\n"
+                                 % (iteration, api_server_url))
+                    dbcli.insert(datetime.now(), time.time(),
+                                 1, "unavailable", list(api_server_url), "api server")
 
-            # Print the captured timing for each operation
-            logging.info("-------------------------- Iteration Stats ---------------------------")
-            for operation, timing in iter_track_time.items():
-                logging.info("Time taken to run %s in iteration %s: %s seconds"
-                             % (operation, iteration, timing))
-            logging.info("----------------------------------------------------------------------\n")
+                if not watch_namespaces_status:
+                    logging.info("Iteration %s: Failed pods and components" % (iteration))
+                    for namespace, failures in failed_pods_components.items():
+                        logging.info("%s: %s", namespace, failures)
+
+                        for pod, containers in failed_pod_containers[namespace].items():
+                            logging.info("Failed containers in %s: %s", pod, containers)
+
+                        component = namespace.split("-")
+                        if component[0] == "openshift":
+                            component = "-".join(component[1:])
+                        else:
+                            component = "-".join(component)
+                        dbcli.insert(datetime.now(), time.time(),
+                                     1, "pod crash", failures, component)
+                    logging.info("")
+
+                # Logging the failed checking of routes
+                if failed_routes:
+                    logging.info("Iteration %s: Failed route monitoring" % iteration)
+                    for route in failed_routes:
+                        logging.info("Route url: %s" % route)
+                    logging.info("")
+                    dbcli.insert(datetime.now(), time.time(),
+                                 1, "unavailable", failed_routes, "route")
+
+                # Report failures in a slack channel
+                if not watch_nodes_status or not watch_namespaces_status or \
+                        not watch_cluster_operators_status:
+                    if slack_integration:
+                        slackcli.slack_logging(cluster_info, iteration, watch_nodes_status,
+                                               failed_nodes, watch_cluster_operators_status,
+                                               failed_operators, watch_namespaces_status,
+                                               failed_pods_components)
+
+                # Run inspection only when the distribution is openshift
+                if distribution == "openshift" and inspect_components:
+                    # Collect detailed logs for all the namespaces with failed
+                    # components parallely
+                    pool.map(inspect.inspect_component, failed_pods_components.keys())
+                    logging.info("")
+                elif distribution == "kubernetes" and inspect_components:
+                    logging.info("Skipping the failed components inspection as "
+                                 "it's specific to OpenShift")
+
+                # Aggregate the status and publish it
+                cerberus_status = watch_nodes_status and watch_namespaces_status \
+                    and watch_cluster_operators_status and server_status
+
+                if cerberus_publish_status:
+                    publish_cerberus_status(cerberus_status)
+
+                # Alert on high latencies
+                metrics = promcli.process_prom_query(alerts_query)
+                if metrics:
+                    logging.warning("Kubernetes API server latency is high. "
+                                    "More than 99th percentile latency for given requests to the "
+                                    "kube-apiserver is above 1 second.\n")
+                    logging.info("%s\n" % (metrics))
+
+                # Sleep for the specified duration
+                logging.info("Sleeping for the specified duration: %s\n" % (sleep_time))
+                time.sleep(float(sleep_time))
+
+                sleep_tracker_start_time = time.time()
+
+                # Track pod crashes/restarts during the sleep interval in all namespaces parallely
+                multiprocessed_output = pool.starmap(kubecli.namespace_sleep_tracker,
+                                                     zip(watch_namespaces, repeat(pods_tracker)))
+
+                crashed_restarted_pods = {}
+                for item in multiprocessed_output:
+                    crashed_restarted_pods.update(item)
+
+                iter_track_time['sleep_tracker'] = time.time() - sleep_tracker_start_time
+
+                if crashed_restarted_pods:
+                    logging.info("Pods that were crashed/restarted during the sleep interval of "
+                                 "iteration %s" % (iteration))
+                    for namespace, pods in crashed_restarted_pods.items():
+                        distinct_pods = set(pod[0] for pod in pods)
+                        logging.info("%s: %s" % (namespace, distinct_pods))
+                        component = namespace.split("-")
+                        if component[0] == "openshift":
+                            component = "-".join(component[1:])
+                        else:
+                            component = "-".join(component)
+                        for pod in pods:
+                            if pod[1] == "crash":
+                                dbcli.insert(datetime.now(), time.time(),
+                                             1, "pod crash", [pod[0]], component)
+                            elif pod[1] == "restart":
+                                dbcli.insert(datetime.now(), time.time(),
+                                             pod[2], "pod restart", [pod[0]], component)
+                    logging.info("")
+
+                # Capture total time taken by the iteration
+                iter_track_time['entire_iteration'] = (time.time() - iteration_start_time) - sleep_time  # noqa
+
+                time_tracker["Iteration " + str(iteration)] = iter_track_time.copy()
+
+                # Print the captured timing for each operation
+                logging.info("-------------------------- Iteration Stats ---------------------------")  # noqa
+                for operation, timing in iter_track_time.items():
+                    logging.info("Time taken to run %s in iteration %s: %s seconds"
+                                 % (operation, iteration, timing))
+                logging.info("----------------------------------------------------------------------\n")  # noqa
+
+            except KeyboardInterrupt:
+                pool.terminate()
+                pool.join()
+                logging.info("Terminating cerberus monitoring")
+                record_time(time_tracker)
+                sys.exit(1)
+
+            except Exception as e:
+                logging.info("Encountered issues in cluster. Hence, setting the go/no-go "
+                             "signal to false")
+                logging.info("Exception: %s\n" % (e))
+                if cerberus_publish_status:
+                    publish_cerberus_status(False)
+                continue
 
         else:
             logging.info("Completed watching for the specified number of iterations: %s"
                          % (iterations))
             record_time(time_tracker)
+            pool.close()
+            pool.join()
     else:
         logging.error("Could not find a config at %s, please check" % (cfg))
         sys.exit(1)
@@ -396,12 +414,4 @@ if __name__ == "__main__":
         logging.error("Please check if you have passed the config")
         sys.exit(1)
     else:
-        try:
-            main(options.cfg)
-            pool.close()
-            pool.join()
-        except KeyboardInterrupt:
-            pool.terminate()
-            pool.join()
-            logging.info("Terminating cerberus monitoring")
-            record_time(time_tracker)
+        main(options.cfg)
