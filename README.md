@@ -6,7 +6,30 @@ Cerberus watches the Kubernetes/OpenShift clusters for dead nodes, system compon
 ### Workflow
 ![Cerberus workflow](media/cerberus-workflow.png)
 
-### Install the dependencies
+
+## Ways to install and use Cerberus
+
+### 1.  Cerberus as a Python Package
+Cerberus is avialable as a python package to ease the installation and setup.
+
+#### Installation
+To install the lastest release:
+
+`pip3 install cerberus-client`
+
+#### Usage
+To start cerberus monitoring, execute:
+
+`cerberus_client -c <config_file_location>`
+
+**NOTE**: When config_file_location is not passed, default config file is used.
+
+### 2. Git clone the Cerberus repository
+```
+$ git clone https://github.com/openshift-scale/cerberus.git
+```
+
+#### Install the dependencies
 ```
 $ pip3 install -r requirements.txt
 ```
