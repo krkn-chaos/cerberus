@@ -346,3 +346,10 @@ def process_routes(watch_url_routes, iter_track_time):
                 failed_routes.append(route_info[0])
         iter_track_time['watch_routes'] = time.time() - watch_routes_start_time
     return failed_routes
+
+
+# Get CSR's in yaml format
+def get_csrs():
+    csr_string = runcommand.invoke("oc get csr -o yaml")
+    csr_yaml = yaml.load(csr_string, Loader=yaml.FullLoader)
+    return csr_yaml
