@@ -11,6 +11,7 @@ import optparse
 import pyfiglet
 import functools
 import importlib
+import pkg_resources
 import multiprocessing
 from itertools import repeat
 from datetime import datetime
@@ -410,14 +411,15 @@ def main(cfg):
         sys.exit(1)
 
 
-if __name__ == "__main__":
+def start():
     # Initialize the parser to read the config
+    CONFIG_PATH = pkg_resources.resource_filename('cerberus', 'config.yaml')
     parser = optparse.OptionParser()
     parser.add_option(
         "-c", "--config",
         dest="cfg",
         help="config location",
-        default="config/config.yaml",
+        default=CONFIG_PATH,
     )
     (options, args) = parser.parse_args()
     logging.basicConfig(
@@ -433,3 +435,7 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
         main(options.cfg)
+
+
+if __name__ == "__main__":
+    start()
