@@ -1,9 +1,0 @@
-setuptools
-PyYAML
-requests
-kubernetes
-datetime
-configparser
-slackclient
-pyfiglet
-prometheus_api_client
