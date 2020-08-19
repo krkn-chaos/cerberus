@@ -328,6 +328,20 @@ def main(cfg):
                     logging.info("Skipping the failed components inspection as "
                                  "it's specific to OpenShift")
 
+                if distribution == "openshift":
+                    watch_csrs_start_time = time.time()
+                    iter_track_time['watch_namespaces'] = time.time() - watch_csrs_start_time
+                    csrs = kubecli.get_csrs()
+                    pending_csr = []
+                    for csr in csrs['items']:
+                        # find csr status
+                        if "Approved" not in csr['status']['conditions'][0]['type']:
+                            pending_csr.append(csr['metadata']['name'])
+                    if pending_csr:
+                        logging.warning("There are CSR's that are currently not approved")
+                        logging.warning("Csr's that are not approved: " + str(pending_csr))
+                    iter_track_time['watch_csrs'] = time.time() - watch_csrs_start_time
+
                 # Alert on high latencies
                 metrics = promcli.process_prom_query(alerts_query)
                 if metrics:
