@@ -293,6 +293,19 @@ def main(cfg):
                     and watch_cluster_operators_status and server_status \
                     and watch_routes_status
 
+                if distribution == "openshift":
+                    watch_csrs_start_time = time.time()
+                    csrs = kubecli.get_csrs()
+                    pending_csr = []
+                    for csr in csrs['items']:
+                        # find csr status
+                        if "Approved" not in csr['status']['conditions'][0]['type']:
+                            pending_csr.append(csr['metadata']['name'])
+                    if pending_csr:
+                        logging.warning("There are CSR's that are currently not approved")
+                        logging.warning("Csr's that are not approved: " + str(pending_csr))
+                    iter_track_time['watch_csrs'] = time.time() - watch_csrs_start_time
+
                 if custom_checks:
                     if iteration == 1:
                         custom_checks_imports = []
@@ -327,19 +340,6 @@ def main(cfg):
                 elif distribution == "kubernetes" and inspect_components:
                     logging.info("Skipping the failed components inspection as "
                                  "it's specific to OpenShift")
-
-                if distribution == "openshift":
-                    watch_csrs_start_time = time.time()
-                    csrs = kubecli.get_csrs()
-                    pending_csr = []
-                    for csr in csrs['items']:
-                        # find csr status
-                        if "Approved" not in csr['status']['conditions'][0]['type']:
-                            pending_csr.append(csr['metadata']['name'])
-                    if pending_csr:
-                        logging.warning("There are CSR's that are currently not approved")
-                        logging.warning("Csr's that are not approved: " + str(pending_csr))
-                    iter_track_time['watch_csrs'] = time.time() - watch_csrs_start_time
 
                 # Alert on high latencies
                 metrics = promcli.process_prom_query(alerts_query)
