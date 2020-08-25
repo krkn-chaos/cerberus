@@ -235,6 +235,7 @@ Namespaces               | Watches all the pods including containers running ins
 Cluster Operators        | Watches all Cluster Operators                                                                               | :heavy_check_mark:        |
 Master Nodes Schedule    | Watches schedule of Master Nodes                                                                            | :heavy_check_mark:        |
 Routes                   | Watches specified routes                                                                                    | :heavy_check_mark:        | 
+CSRs                     | Warns if any CSRs are not approved                                                                         | :heavy_check_mark:        | 
 
 **NOTE**: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned in the [config](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml) by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
 
