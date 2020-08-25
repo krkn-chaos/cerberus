@@ -330,7 +330,6 @@ def main(cfg):
 
                 if distribution == "openshift":
                     watch_csrs_start_time = time.time()
-                    iter_track_time['watch_namespaces'] = time.time() - watch_csrs_start_time
                     csrs = kubecli.get_csrs()
                     pending_csr = []
                     for csr in csrs['items']:
