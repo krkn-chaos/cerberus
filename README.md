@@ -239,4 +239,5 @@ Routes                   | Watches specified routes                             
 **NOTE**: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned in the [config](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml) by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
 
 ### Blogs and other useful resources
-- https://www.openshift.com/blog/openshift-scale-ci-part-4-introduction-to-cerberus-guardian-of-kubernetes/openshift-clouds 
+- https://www.openshift.com/blog/openshift-scale-ci-part-4-introduction-to-cerberus-guardian-of-kubernetes/openshift-clouds
+- https://www.openshift.com/blog/reinforcing-cerberus-guardian-of-openshift/kubernetes-clusters
