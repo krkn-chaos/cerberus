@@ -1,6 +1,8 @@
 # Cerberus
 Guardian of Kubernetes and OpenShift Clusters
 
+![Cerberus logo](media/logo_assets/full_color/over_light_background/cerberus-logo_small-color-light-full-horizontal.png)
+
 Cerberus watches the Kubernetes/OpenShift clusters for dead nodes, system component failures/health and exposes a go or no-go signal which can be consumed by other workload generators or applications in the cluster and act accordingly.
 
 ### Workflow
@@ -242,3 +244,6 @@ CSRs                     | Warns if any CSRs are not approved                   
 ### Blogs and other useful resources
 - https://www.openshift.com/blog/openshift-scale-ci-part-4-introduction-to-cerberus-guardian-of-kubernetes/openshift-clouds
 - https://www.openshift.com/blog/reinforcing-cerberus-guardian-of-openshift/kubernetes-clusters
+
+### Credits
+Thanks to Mary Shakshober ( https://github.com/maryshak1996 ) for designing the logo.
