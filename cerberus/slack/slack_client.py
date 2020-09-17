@@ -22,11 +22,12 @@ def initialize_slack_client():
 
 
 # Post messages and failures in slack
-def post_message_in_slack(slack_message):
+def post_message_in_slack(slack_message, thread_ts=None):
     slack_client.chat_postMessage(
         channel=slack_channel_ID,
         link_names=True,
-        text=slack_message
+        text=slack_message,
+        thread_ts=thread_ts
     )
 
 
@@ -51,10 +52,13 @@ def slack_tagging(cop_slack_member_ID, slack_team_alias):
 
 # Report the start of cerberus cluster monitoring in slack channel
 def slack_report_cerberus_start(cluster_info, weekday, cop_slack_member_ID):
+    response = slack_client.chat_postMessage(channel=slack_channel_ID,
+                                             link_names=True,
+                                             text="%s Cerberus has started monitoring! "":skull_and_crossbones: %s" % (slack_tag, cluster_info)) # noqa
+    global thread_ts
+    thread_ts = response['ts']
     if cop_slack_member_ID in valid_cops:
-        post_message_in_slack("Hi " + slack_tag + "! The cop for " + weekday + "!\n")
-    post_message_in_slack(slack_tag + "Cerberus has started monitoring! "
-                          ":skull_and_crossbones: %s" % (cluster_info))
+        post_message_in_slack("Hi " + slack_tag + "! The cop for " + weekday + "!\n", thread_ts)
 
 
 # Report the nodes and namespace failures in slack channel
@@ -76,4 +80,4 @@ def slack_logging(cluster_info, iteration, watch_nodes_status, failed_nodes,
                           "is at *%s* on the host cerberus is running."
                           % (cluster_info, iteration,
                               datetime.datetime.now().replace(microsecond=0).isoformat(),
-                              issues, cerberus_report_path))
+                              issues, cerberus_report_path), thread_ts)
