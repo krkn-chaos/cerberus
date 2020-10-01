@@ -5,7 +5,7 @@ Container image gets automatically built by quay.io at [Cerberus image](https://
 ### Run containerized version
 Refer to the [instructions](https://github.com/openshift-scale/cerberus#Run-containerized-version) for information on how to build and run the containerized version of cerberus.
 
-### Cerberus as a KubeApp
+### Cerberus as a Kubernetes/OpenShift application
 To run containerized Cerberus as a Kubernetes/OpenShift Deployment, follow these steps:
 1. Configure the [config.yaml](https://github.com/openshift-scale/cerberus/tree/master/config) file according to your requirements.
 2. Create a namespace under which you want to run the cerberus pod using `kubectl create ns <namespace>`.
