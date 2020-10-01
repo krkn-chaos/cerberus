@@ -42,7 +42,7 @@ def get_channel_members():
 def slack_tagging(watcher_slack_member_ID, slack_team_alias):
     global slack_tag, valid_watchers
     valid_watchers = get_channel_members()['members']
-    if watchers_slack_member_ID in valid_watchers:
+    if watcher_slack_member_ID in valid_watchers:
         slack_tag = "<@" + watcher_slack_member_ID + ">"
     elif slack_team_alias:
         slack_tag = "@" + slack_team_alias + " "
