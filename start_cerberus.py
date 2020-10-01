@@ -188,13 +188,13 @@ def main(cfg):
                 # Read the config for info when slack integration is enabled
                 if slack_integration:
                     weekday = runcommand.invoke("date '+%A'")[:-1]
-                    cop_slack_member_ID = config["cerberus"]["cop_slack_ID"].get(weekday, None)
+                    watcher_slack_member_ID = config["cerberus"]["watcher_slack_ID"].get(weekday, None)
                     slack_team_alias = config["cerberus"].get("slack_team_alias", None)
-                    slackcli.slack_tagging(cop_slack_member_ID, slack_team_alias)
+                    slackcli.slack_tagging(watcher_slack_member_ID, slack_team_alias)
 
                     if iteration == 1:
                         slackcli.slack_report_cerberus_start(cluster_info, weekday,
-                                                             cop_slack_member_ID)
+                                                             watcher_slack_member_ID)
 
                 # Collect the initial creation_timestamp and restart_count of all the pods in all
                 # the namespaces in watch_namespaces
