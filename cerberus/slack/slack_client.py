@@ -39,11 +39,11 @@ def get_channel_members():
 
 
 # slack tag to be used while reporitng in slack channel
-def slack_tagging(cop_slack_member_ID, slack_team_alias):
-    global slack_tag, valid_cops
-    valid_cops = get_channel_members()['members']
-    if cop_slack_member_ID in valid_cops:
-        slack_tag = "<@" + cop_slack_member_ID + ">"
+def slack_tagging(watcher_slack_member_ID, slack_team_alias):
+    global slack_tag, valid_watchers
+    valid_watchers = get_channel_members()['members']
+    if watcher_slack_member_ID in valid_watchers:
+        slack_tag = "<@" + watcher_slack_member_ID + ">"
     elif slack_team_alias:
         slack_tag = "@" + slack_team_alias + " "
     else:
@@ -51,14 +51,14 @@ def slack_tagging(cop_slack_member_ID, slack_team_alias):
 
 
 # Report the start of cerberus cluster monitoring in slack channel
-def slack_report_cerberus_start(cluster_info, weekday, cop_slack_member_ID):
+def slack_report_cerberus_start(cluster_info, weekday, watcher_slack_member_ID):
     response = slack_client.chat_postMessage(channel=slack_channel_ID,
                                              link_names=True,
                                              text="%s Cerberus has started monitoring! "":skull_and_crossbones: %s" % (slack_tag, cluster_info)) # noqa
     global thread_ts
     thread_ts = response['ts']
-    if cop_slack_member_ID in valid_cops:
-        post_message_in_slack("Hi " + slack_tag + "! The cop for " + weekday + "!\n", thread_ts)
+    if watcher_slack_member_ID in valid_watchers:
+        post_message_in_slack("Hi " + slack_tag + "! The watcher for " + weekday + "!\n", thread_ts)
 
 
 # Report the nodes and namespace failures in slack channel
