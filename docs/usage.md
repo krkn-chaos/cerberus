@@ -34,8 +34,8 @@ cerberus:
 
     slack_integration: False                             # When enabled, cerberus reports status of failed iterations in the slack channel
                                                          # The following env vars need to be set: SLACK_API_TOKEN ( Bot User OAuth Access Token ) and SLACK_CHANNEL ( channel to send notifications in case of failures )
-                                                         # When slack_integration is enabled, a cop can be assigned for each day. The cop of the day is tagged while reporting failures in the slack channel. Values are slack member ID's.
-    cop_slack_ID:                                        # (NOTE: Defining the cop id's is optional and when the cop slack id's are not defined, the slack_team_alias tag is used if it is set else no tag is used while reporting failures in the slack channel.)
+                                                         # When slack_integration is enabled, a watcher can be assigned for each day. The watcher of the day is tagged while reporting failures in the slack channel. Values are slack member ID's.
+    watcher_slack_ID:                                        # (NOTE: Defining the watcher id's is optional and when the watcher slack id's are not defined, the slack_team_alias tag is used if it is set else no tag is used while reporting failures in the slack channel.)
         Monday:
         Tuesday:
         Wednesday:
@@ -43,7 +43,7 @@ cerberus:
         Friday:
         Saturday:
         Sunday:
-    slack_team_alias:                                    # The slack team alias to be tagged while reporting failures in the slack channel when no cop is assigned
+    slack_team_alias:                                    # The slack team alias to be tagged while reporting failures in the slack channel when no watcher is assigned
 
     custom_checks:                                       # Relative paths of files conataining additional user defined checks
         -   custom_checks/custom_check_sample.py
