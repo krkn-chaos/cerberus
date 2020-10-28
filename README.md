@@ -80,7 +80,7 @@ There can be number of use cases, here are some of them:
 ### Tools consuming Cerberus
 - [Benchmark Operator](https://github.com/cloud-bulldozer/benchmark-operator): The intent of this Operator is to deploy common workloads to establish a performance baseline of Kubernetes cluster on your provider. Benchmark Operator consumes Cerberus to determine if the cluster was healthy during the benchmark run. More information can be found at [cerberus-integration](https://github.com/cloud-bulldozer/benchmark-operator#cerberus-integration).
 
-- [Kraken](https://github.com/openshift-scale/kraken/): Tool to inject deliberate failures into Kubernetes/OpenShift clusters to check if it is resilient. Kraken consumes Cerberus to determine if the cluster is healthy as a whole in addition to the targeted component during chaos testing. More information can be found at [cerberus-integration] https://github.com/openshift-scale/kraken/#cerberus-to-help-with-cluster-health-checks.
+- [Kraken](https://github.com/openshift-scale/kraken/): Tool to inject deliberate failures into Kubernetes/OpenShift clusters to check if it is resilient. Kraken consumes Cerberus to determine if the cluster is healthy as a whole in addition to the targeted component during chaos testing. More information can be found at [cerberus-integration](https://github.com/openshift-scale/kraken#kraken-scenario-passfail-criteria-and-report).
 
 
 
