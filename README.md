@@ -73,14 +73,14 @@ Monitoring metrics and alerting on abnormal behavior is critical as they are the
 There can be number of use cases, here are some of them:
 - We run tools to push the limits of Kubernetes/OpenShift to look at the performance and scalability. There are a number of instances where system components or nodes start to degrade, which invalidates the results and the workload generator continues to push the cluster until it is unrecoverable.
 
-- When running chaos experiments on a kubernetes/OpenShift cluster, they can potentially break the components unrelated to the targeted components which means that the choas experiment won't be able to find it. The go/no-go signal can be used here to decide whether the cluster recovered from the failure injection as well as to decide whether to continue with the next chaos scenario.
+- When running chaos experiments on a kubernetes/OpenShift cluster, they can potentially break the components unrelated to the targeted components which means that the chaos experiment won't be able to find it. The go/no-go signal can be used here to decide whether the cluster recovered from the failure injection as well as to decide whether to continue with the next chaos scenario.
 
 
 
 ### Tools consuming Cerberus
 - [Benchmark Operator](https://github.com/cloud-bulldozer/benchmark-operator): The intent of this Operator is to deploy common workloads to establish a performance baseline of Kubernetes cluster on your provider. Benchmark Operator consumes Cerberus to determine if the cluster was healthy during the benchmark run. More information can be found at [cerberus-integration](https://github.com/cloud-bulldozer/benchmark-operator#cerberus-integration).
 
-- [Kraken](https://github.com/openshift-scale/kraken/): Tool to inject deliberate failures into Kubernetes/OpenShift clusters to check if it is resilient. Kraken consumes Cerberus to determine if the cluster is healthy as a whole in addition to the targeted component during chaos testing. More inforamtion can be found at [cerberus-integration] https://github.com/openshift-scale/kraken/#cerberus-to-help-with-cluster-health-checks.
+- [Kraken](https://github.com/openshift-scale/kraken/): Tool to inject deliberate failures into Kubernetes/OpenShift clusters to check if it is resilient. Kraken consumes Cerberus to determine if the cluster is healthy as a whole in addition to the targeted component during chaos testing. More information can be found at [cerberus-integration] https://github.com/openshift-scale/kraken/#cerberus-to-help-with-cluster-health-checks.
 
 
 
