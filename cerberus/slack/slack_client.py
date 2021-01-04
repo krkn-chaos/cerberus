@@ -2,7 +2,9 @@ import os
 import slack
 import logging
 import datetime
+import time
 import cerberus.invoke.command as runcommand
+from slack.errors import SlackApiError
 
 
 # Load env variables and initialize slack python client
@@ -23,12 +25,24 @@ def initialize_slack_client():
 
 # Post messages and failures in slack
 def post_message_in_slack(slack_message, thread_ts=None):
-    slack_client.chat_postMessage(
-        channel=slack_channel_ID,
-        link_names=True,
-        text=slack_message,
-        thread_ts=thread_ts
-    )
+    max_retries = 10
+    for _ in range(max_retries):
+        try:
+            slack_client.chat_postMessage(channel=slack_channel_ID,
+                                          link_names=True,
+                                          text=slack_message,
+                                          thread_ts=thread_ts)
+        except SlackApiError as e:
+            if e.response["error"] == "ratelimited":
+                # The `Retry-After` header will tell us how long to wait before retrying
+                delay = int(e.response.headers['Retry-After'])
+                logging.info(f"Rate limited. Retrying in {delay} seconds")
+                time.sleep(delay)
+                continue
+            else:
+                # other errors
+                raise e
+        break
 
 
 # Get members of a channel
