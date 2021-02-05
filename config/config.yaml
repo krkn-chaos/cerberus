@@ -1,7 +1,7 @@
 cerberus:
     distribution: openshift                              # Distribution can be kubernetes or openshift
     kubeconfig_path: ~/.kube/config                      # Path to kubeconfig
-    port: 8093                                           # http server port where cerberus status is published
+    port: 8080                                           # http server port where cerberus status is published
     watch_nodes: True                                    # Set to True for the cerberus to monitor the cluster nodes
     watch_cluster_operators: True                        # Set to True for cerberus to monitor cluster operators
     watch_url_routes:                                    # Route url's you want to monitor, this is a double array with the url and optional authorization parameter
@@ -23,7 +23,7 @@ cerberus:
     prometheus_bearer_token:                             # The bearer token is automatically obtained in case of OpenShift, please set it when the distribution is Kubernetes. This is needed to authenticate with prometheus.
                                                          # This enables Cerberus to query prometheus and alert on observing high Kube API Server latencies. 
 
-    slack_integration: True                             # When enabled, cerberus reports the failed iterations in the slack channel
+    slack_integration: False                             # When enabled, cerberus reports the failed iterations in the slack channel
                                                          # The following env vars needs to be set: SLACK_API_TOKEN ( Bot User OAuth Access Token ) and SLACK_CHANNEL ( channel to send notifications in case of failures )
                                                          # When slack_integration is enabled, a watcher can be assigned for each day. The watcher of the day is tagged while reporting failures in the slack channel. Values are slack member ID's.
     watcher_slack_ID:                                        # (NOTE: Defining the watcher id's is optional and when the watcher slack id's are not defined, the slack_team_alias tag is used if it is set else no tag is used while reporting failures in the slack channel.)
