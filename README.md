@@ -61,7 +61,8 @@ Cerberus also consumes [node-problem-detector](https://github.com/kubernetes/nod
 
 
 ### Bring your own checks
-Users can add additional checks to monitor components that are not being monitored by Cerberus and consume it as part of the go/no-go signal.  This can be accomplished by placing relative paths of files containing additional checks under custom_checks in config file. All the checks should be placed within the main function of the file. If the additional checks need to be considered in determining the go/no-go signal of Cerberus, the main function can return a boolean value for the same. However, it's optional to return a value. Refer to [example_check](https://github.com/openshift-scale/cerberus/blob/master/custom_checks/custom_check_sample.py) for an example custom check file.
+Users can add additional checks to monitor components that are not being monitored by Cerberus and consume it as part of the go/no-go signal.  This can be accomplished by placing relative paths of files containing additional checks under custom_checks in config file. All the checks should be placed within the main function of the file. If the additional checks need to be considered in determining the go/no-go signal of Cerberus, the main function can return a boolean value for the same. Having a dict return value of the format {'status':status, 'message':message} shall send signal to Cerberus along with message to be displayed in slack notification. However, it's optional to return a value.
+Refer to [example_check](https://github.com/openshift-scale/cerberus/blob/master/custom_checks/custom_check_sample.py) for an example custom check file.
 
 
 ### Alerts

@@ -64,7 +64,8 @@ def slack_report_cerberus_start(cluster_info, weekday, watcher_slack_member_ID):
 # Report the nodes and namespace failures in slack channel
 def slack_logging(cluster_info, iteration, watch_nodes_status, failed_nodes,
                   watch_cluster_operators_status, failed_operators,
-                  watch_namespaces_status, failed_pods_components):
+                  watch_namespaces_status, failed_pods_components,
+                  custom_checks_status, custom_checks_fail_messages):
     issues = []
     cerberus_report_path = runcommand.invoke("pwd | tr -d '\n'")
     if not watch_nodes_status:
@@ -73,6 +74,8 @@ def slack_logging(cluster_info, iteration, watch_nodes_status, failed_nodes,
         issues.append("*cluster operators: " + ", ".join(failed_operators) + "*")
     if not watch_namespaces_status:
         issues.append("*namespaces: " + ", ".join(list(failed_pods_components.keys())) + "*")
+    if not custom_checks_status:
+        issues.append("*custom_checks: " + ", ".join(custom_checks_fail_messages) + "*")
     issues = "\n".join(issues)
     post_message_in_slack(slack_tag + " %sIn iteration %d at %s, Cerberus "
                           "found issues in: \n%s \nHence, setting the "

@@ -315,23 +315,31 @@ def main(cfg):
                             my_check = ".".join(check.replace("/", ".").split(".")[:-1])
                             my_check_module = importlib.import_module(my_check)
                             custom_checks_imports.append(my_check_module)
-
+                    custom_checks_fail_messages = []
+                    custom_checks_status = True
                     for check in custom_checks_imports:
                         check_returns = check.main()
                         if type(check_returns) == bool:
-                            cerberus_status = cerberus_status and check_returns
+                            custom_checks_status = custom_checks_status and check_returns
+                        elif type(check_returns) == dict:
+                            status = check_returns['status']
+                            message = check_returns['message']
+                            custom_checks_status = custom_checks_status and status
+                            custom_checks_fail_messages.append(message)
+                    cerberus_status = cerberus_status and custom_checks_status
 
                 if cerberus_publish_status:
                     publish_cerberus_status(cerberus_status)
 
                 # Report failures in a slack channel
                 if not watch_nodes_status or not watch_namespaces_status or \
-                        not watch_cluster_operators_status:
+                        not watch_cluster_operators_status or not custom_checks_status:
                     if slack_integration:
                         slackcli.slack_logging(cluster_info, iteration, watch_nodes_status,
                                                failed_nodes, watch_cluster_operators_status,
                                                failed_operators, watch_namespaces_status,
-                                               failed_pods_components)
+                                               failed_pods_components, custom_checks_status,
+                                               custom_checks_fail_messages)
 
                 # Run inspection only when the distribution is openshift
                 if distribution == "openshift" and inspect_components:
