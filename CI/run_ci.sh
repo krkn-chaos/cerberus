@@ -11,8 +11,6 @@ echo "running test suit consisting of ${test_list}"
 sed 's/.sh//g' CI/tests/test_list > CI/tests/my_tests
 
 # Prep the results.markdown file
-echo "Results for "$JOB_NAME > results.markdown
-echo "" >> results.markdown
 echo 'Test                   | Result | Duration' >> results.markdown
 echo '-----------------------|--------|---------' >> results.markdown
 
