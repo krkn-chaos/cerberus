@@ -41,12 +41,12 @@
         "entire_iteration": 4.987471580505371
     },
     "Average": {
-        "check_master_taint": 0.15222883224487305,
-        "watch_nodes": 0.19593048095703125,
-        "watch_cluster_operators": 0.6012948036193848,
-        "watch_namespaces": 1.9014112663269043,
-        "watch_csrs": 0.13437342643737793,
-        "sleep_tracker": 1.9780062103271485,
-        "entire_iteration": 5.209869289398193
+        "check_master_taint": 0.16142383224487305,
+        "watch_nodes": 0.18087548095703125,
+        "watch_cluster_operators": 0.5144798036193848,
+        "watch_namespaces": 1.0400562663269043,
+        "watch_csrs": 0.12037242643737793,
+        "sleep_tracker": 1.1028412103271485,
+        "entire_iteration": 3.157821289398193
     }
 }
