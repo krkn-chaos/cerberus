@@ -1,0 +1,52 @@
+{
+    "Iteration 1": {
+        "check_master_taint": 0.15222883224487305,
+        "watch_nodes": 0.23661470413208008,
+        "watch_cluster_operators": 0.5375726222991943,
+        "watch_namespaces": 1.8518397808074951,
+        "watch_csrs": 0.1346416473388672,
+        "sleep_tracker": 2.161618947982788,
+        "entire_iteration": 7.284861326217651
+    },
+    "Iteration 2": {
+        "watch_nodes": 0.1833338737487793,
+        "watch_cluster_operators": 0.524852991104126,
+        "watch_namespaces": 2.139892101287842,
+        "watch_csrs": 0.1354081630706787,
+        "sleep_tracker": 1.9052846431732178,
+        "entire_iteration": 4.935232877731323
+    },
+    "Iteration 3": {
+        "watch_nodes": 0.18534445762634277,
+        "watch_cluster_operators": 0.5777091979980469,
+        "watch_namespaces": 2.096590042114258,
+        "watch_csrs": 0.13283395767211914,
+        "sleep_tracker": 1.8985106945037842,
+        "entire_iteration": 4.938185453414917
+    },
+    "Iteration 4": {
+        "watch_nodes": 0.18702411651611328,
+        "watch_cluster_operators": 0.5671341419219971,
+        "watch_namespaces": 1.8734102249145508,
+        "watch_csrs": 0.1332862377166748,
+        "sleep_tracker": 2.097926378250122,
+        "entire_iteration": 4.903595209121704
+    },
+    "Iteration 5": {
+        "watch_nodes": 0.18733525276184082,
+        "watch_cluster_operators": 0.7992050647735596,
+        "watch_namespaces": 1.945324182510376,
+        "watch_csrs": 0.1356971263885498,
+        "sleep_tracker": 1.87669038772583,
+        "entire_iteration": 4.987471580505371
+    },
+    "Average": {
+        "check_master_taint": 0.15222883224487305,
+        "watch_nodes": 0.19593048095703125,
+        "watch_cluster_operators": 0.6012948036193848,
+        "watch_namespaces": 1.9014112663269043,
+        "watch_csrs": 0.13437342643737793,
+        "sleep_tracker": 1.9780062103271485,
+        "entire_iteration": 5.209869289398193
+    }
+}
