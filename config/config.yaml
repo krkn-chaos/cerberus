@@ -40,9 +40,9 @@ cerberus:
 
 tunings:
     iterations: 5
-    sleep_time: 2
+    sleep_time: 60
     kube_api_request_chunk_size: 250                     # Large requests will be broken into the specified chunk size to reduce the load on API server and improve responsiveness.
-    daemon_mode: False
+    daemon_mode: True
     cores_usage_percentage: 0.5                          # Set the fraction of cores to be used for multiprocessing
 
 database:
