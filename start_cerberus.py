@@ -84,7 +84,9 @@ def main(cfg):
         cores_usage_percentage = config["tunings"].get("cores_usage_percentage", 0.5)
         database_path = config["database"].get("database_path", "/tmp/cerberus.db")
         reuse_database = config["database"].get("reuse_database", False)
-        custom_checks_status = False
+        # Initialize custom checks vars
+        custom_checks_status = True
+        custom_checks_fail_messages = []
 
         # Initialize clients and set kube api request chunk size
         if not os.path.isfile(kubeconfig_path):
