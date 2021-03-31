@@ -15,6 +15,7 @@ $ git clone https://github.com/openshift-scale/cerberus.git
 ```
 
 ### Install the dependencies
+**NOTE**: Recommended to use a virtual environment(pyenv,venv) so as to prevent conflicts with already installed packages.
 ```
 $ pip3 install -r requirements.txt
 ```

@@ -1,6 +1,6 @@
 set -xeEo pipefail
 
-source tests/common.sh
+source CI/tests/common.sh
 
 trap error ERR
 trap finish EXIT
