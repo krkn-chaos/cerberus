@@ -75,7 +75,7 @@ fi
 rm -rf gold test_* ci_results tmp
 
 cat results.markdown
-rm -f results.markdown
+
 exit $test_rc 
 
 
