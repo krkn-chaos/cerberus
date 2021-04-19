@@ -290,7 +290,7 @@ def process_cluster_operator(distribution, watch_cluster_operators, iteration, i
 
 
 # Check for NoSchedule taint in all the master nodes
-def check_master_taint(master_nodes):
+def check_master_taint(master_nodes, master_label):
     schedulable_masters = []
     all_master_info = runcommand.invoke("kubectl get nodes " + " ".join(master_nodes) + " -o json")
     all_master_info = json.loads(all_master_info)
@@ -303,7 +303,7 @@ def check_master_taint(master_nodes):
         NoSchedule_taint = False
         try:
             for taint in node_info["spec"]["taints"]:
-                if taint["key"] == "node-role.kubernetes.io/master" and \
+                if taint["key"] == str(master_label) and \
                     taint["effect"] == "NoSchedule":
                     NoSchedule_taint = True
                     break
@@ -314,12 +314,12 @@ def check_master_taint(master_nodes):
     return schedulable_masters
 
 
-def process_master_taint(master_nodes, iteration, iter_track_time):
+def process_master_taint(master_nodes, master_label, iteration, iter_track_time):
     schedulable_masters = []
     if len(master_nodes) > 0:
         if iteration % 10 == 1:
             check_taint_start_time = time.time()
-            schedulable_masters = check_master_taint(master_nodes)
+            schedulable_masters = check_master_taint(master_nodes, master_label)
             iter_track_time['check_master_taint'] = time.time() - check_taint_start_time
     return schedulable_masters
 

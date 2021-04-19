@@ -140,14 +140,14 @@ def main(cfg):
             inspect.delete_inspect_directory()
 
         # get list of all master nodes with provided labels in the config
+        master_label = watch_master_schedulable["label"]
         master_nodes = []
         if watch_master_schedulable["enabled"] == True
-            label = watch_master_schedulable["label"]
-            nodes = kubecli.list_nodes(label)
+            nodes = kubecli.list_nodes(master_label)
             if len(nodes) == 0:
                 logging.error("No master node found for the label %s \
                     Either set this label to False or add proper labels \
-                    in the config" % (label)
+                    in the config" % (master_label)
                 sys.exit(1)
             else:
                 master_nodes.append(nodes)
@@ -223,7 +223,7 @@ def main(cfg):
                     (watch_cluster_operators_status, failed_operators), (failed_routes) = \
                     pool.map(smap, [functools.partial(kubecli.is_url_available, api_server_url),
                                     functools.partial(kubecli.process_master_taint,
-                                                      master_nodes, iteration, iter_track_time),
+                                                      master_nodes, master_label, iteration, iter_track_time),
                                     functools.partial(kubecli.process_nodes, watch_nodes,
                                                       iteration, iter_track_time),
                                     functools.partial(kubecli.process_cluster_operator,
