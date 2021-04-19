@@ -24,6 +24,10 @@ cerberus:
         -    openshift-kube-scheduler
         -    openshift-ingress
         -    openshift-sdn
+    watch_schedulable_masters_labels:                    # List of master node labels to watch,
+        node-role.kubernetes.io/master: True             # Set to false to disable watching this label
+                                                         add more labels as required with True/False boolean to enable/disable.
+                                                
     cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
     inspect_components: False                            # Enable it only when OpenShift client is supported to run.
                                                          # When enabled, cerberus collects logs, events and metrics of failed components

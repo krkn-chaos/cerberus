@@ -316,10 +316,11 @@ def check_master_taint(master_nodes):
 
 def process_master_taint(master_nodes, iteration, iter_track_time):
     schedulable_masters = []
-    if iteration % 10 == 1:
-        check_taint_start_time = time.time()
-        schedulable_masters = check_master_taint(master_nodes)
-        iter_track_time['check_master_taint'] = time.time() - check_taint_start_time
+    if len(master_nodes) > 0:
+        if iteration % 10 == 1:
+            check_taint_start_time = time.time()
+            schedulable_masters = check_master_taint(master_nodes)
+            iter_track_time['check_master_taint'] = time.time() - check_taint_start_time
     return schedulable_masters
 
 
