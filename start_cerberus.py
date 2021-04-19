@@ -71,7 +71,7 @@ def main(cfg):
         watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", False)
         watch_namespaces = config["cerberus"].get("watch_namespaces", [])
         watch_url_routes = config["cerberus"].get("watch_url_routes", [])
-        watch_schedulable_masters_labels = config["cerberus"].get("watch_schedulable_masters_labels", {})
+        watch_master_schedulable = config["cerberus"].get("watch_master_schedulable", {})
         cerberus_publish_status = config["cerberus"].get("cerberus_publish_status", False)
         inspect_components = config["cerberus"].get("inspect_components", False)
         slack_integration = config["cerberus"].get("slack_integration", False)
@@ -141,16 +141,16 @@ def main(cfg):
 
         # get list of all master nodes with provided labels in the config
         master_nodes = []
-        for label in watch_schedulable_masters_labels:
-            if watch_schedulable_masters_labels[label] == True
-                nodes = kubecli.list_nodes(str(label))
-                if len(nodes) == 0:
-                    logging.error("No master node found for the label %s \
-                        Either set this label to False or add proper labels \
-                        in the config" % (str(label)))
-                    sys.exit(1)
-                else:
-                    master_nodes.append(nodes)
+        if watch_master_schedulable["enabled"] == True
+            label = watch_master_schedulable["label"]
+            nodes = kubecli.list_nodes(label)
+            if len(nodes) == 0:
+                logging.error("No master node found for the label %s \
+                    Either set this label to False or add proper labels \
+                    in the config" % (label)
+                sys.exit(1)
+            else:
+                master_nodes.append(nodes)
 
         # Use cluster_info to get the api server url
         api_server_url = cluster_info.split(" ")[-1].strip() + "/healthz"
