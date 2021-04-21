@@ -142,12 +142,12 @@ def main(cfg):
         # get list of all master nodes with provided labels in the config
         master_label = watch_master_schedulable["label"]
         master_nodes = []
-        if watch_master_schedulable["enabled"] == True
+        if watch_master_schedulable["enabled"]:
             nodes = kubecli.list_nodes(master_label)
             if len(nodes) == 0:
                 logging.error("No master node found for the label %s \
                     Either set this label to False or add proper labels \
-                    in the config" % (master_label)
+                    in the config" % (master_label))
                 sys.exit(1)
             else:
                 master_nodes.append(nodes)
