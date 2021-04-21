@@ -146,11 +146,11 @@ def main(cfg):
             nodes = kubecli.list_nodes(master_label)
             if len(nodes) == 0:
                 logging.error("No master node found for the label %s \
-                    Either set this label to False or add proper labels \
-                    in the config" % (master_label))
+                Either set this label to False or add proper labels \
+                in the config" % (master_label))
                 sys.exit(1)
             else:
-                master_nodes.append(nodes)
+                master_nodes.extend(nodes)
 
         # Use cluster_info to get the api server url
         api_server_url = cluster_info.split(" ")[-1].strip() + "/healthz"
