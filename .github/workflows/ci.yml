@@ -7,7 +7,7 @@ on:
 jobs:
   python-ci:
     runs-on: ubuntu-latest
-    name: Lint
+    name: Flake8 Lint
     steps:
       - name: Check out source repository
         uses: actions/checkout@v2
@@ -24,3 +24,16 @@ jobs:
           ignore: E123,E125
           exclude: .venv,.git,.tox,dist,doc,*lib/python*,*egg,build
           max-line-length: 110
+  package-install-ci:
+    runs-on: ubuntu-latest
+    name: Install cerberus
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v2
+      - name: Set up Python environment
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
+      - name: Run install script
+        run: |
+          python setup.py develop
