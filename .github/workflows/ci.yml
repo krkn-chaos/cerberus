@@ -1,0 +1,39 @@
+name: Code Quality Check
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  python-ci:
+    runs-on: ubuntu-latest
+    name: Flake8 Lint
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v2
+      - name: Set up Python environment
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
+      - uses: BSFishy/pip-action@v1
+        with:
+          requirements: requirements.txt
+      - name: flake8 Lint
+        uses: py-actions/flake8@v1
+        with:
+          ignore: E123,E125
+          exclude: .venv,.git,.tox,dist,doc,*lib/python*,*egg,build
+          max-line-length: 110
+  package-install-ci:
+    runs-on: ubuntu-latest
+    name: Install cerberus
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v2
+      - name: Set up Python environment
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
+      - name: Run install script
+        run: |
+          python setup.py develop
