@@ -4,11 +4,11 @@ cerberus:
     watch_nodes: True                                    # Set to True for the cerberus to monitor the cluster nodes
     watch_cluster_operators: False                       # Set to True for cerberus to monitor cluster operators. Enable it only when distribution is openshift
     watch_url_routes:                                    # Route url's you want to monitor, this is a double array with the url and optional authorization parameter
-    watch_namespaces:                                    # List of namespaces to be monitored
-        -    kube-system
     watch_master_schedulable:                            # When enabled checks for the schedulable master nodes with given label.
         enabled: True
         label: node-role.kubernetes.io/master
+    watch_namespaces:                                    # List of namespaces to be monitored
+        -    kube-system
     cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
     inspect_components: False                            # Enable it only when OpenShift client is supported to run
                                                          # When enabled, cerberus collects logs, events and metrics of failed components
