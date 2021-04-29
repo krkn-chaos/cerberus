@@ -12,3 +12,19 @@ When the cerberus is configured to run in the daemon mode, it will continuosly m
 1. The failures in the past 1 hour can be retrieved in the json format by visiting http://0.0.0.0:8080/history.
 2. The failures in a specific time window can be retrieved in the json format by visiting http://0.0.0.0:8080/history?loopback=<interval>.
 3. The failures between two time timestamps, the failures of specific issues types and the failures related to specific components can be retrieved in the json format by visiting http://0.0.0.0:8080/analyze url. The filters have to be applied to scrape the failures accordingly.
+
+#### Sample Slack Config
+
+This is a snippet of how would your slack config could look like within your `cerberus_config.yaml`.
+
+```yaml
+    watcher_slack_ID:
+        Monday: U1234ABCD   # replace with your Slack ID from Profile-> More -> Copy Member ID
+        Tuesday:            # Same or different ID can be used for remaining days depending on who you want to tag 
+        Wednesday: 
+        Thursday: 
+        Friday: 
+        Saturday: 
+        Sunday: 
+    slack_team_alias:   @group_or_team_id
+```
