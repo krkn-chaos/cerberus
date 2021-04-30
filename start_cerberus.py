@@ -140,9 +140,10 @@ def main(cfg):
             inspect.delete_inspect_directory()
 
         # get list of all master nodes with provided labels in the config
-        master_label = watch_master_schedulable["label"]
         master_nodes = []
+        master_label = ""
         if watch_master_schedulable["enabled"]:
+            master_label = watch_master_schedulable["label"]
             nodes = kubecli.list_nodes(master_label)
             if len(nodes) == 0:
                 logging.error("No master node found for the label %s \
