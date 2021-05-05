@@ -16,6 +16,5 @@ def inspect_component(namespace):
     if os.path.isdir(dir_name):
         runcommand.invoke("rm -R " + dir_name)
         logging.info("Deleted existing %s directory" % (dir_name))
-    command_out = runcommand.invoke("oc adm inspect ns/" + namespace + " --dest"
-                                    "-dir=" + dir_name + " | tr -d '\n'")
+    command_out = runcommand.invoke("oc adm inspect ns/" + namespace + " --dest" "-dir=" + dir_name + " | tr -d '\n'")
     logging.info(command_out)

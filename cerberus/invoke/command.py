@@ -8,8 +8,7 @@ import sys
 def invoke(command):
     output = ""
     try:
-        output = subprocess.check_output(command, shell=True,
-                                         universal_newlines=True)
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
     except Exception:
         logging.error("Failed to run %s" % (command))
         sys.exit(1)
@@ -21,11 +20,11 @@ def invoke(command):
 # It won't stop Cerberus execution but doesn't guarantee that command returns expected stdout.
 def optional_invoke(command):
     try:
-        optional_output = subprocess.check_output(command, shell=True,
-                                                  universal_newlines=True)
+        optional_output = subprocess.check_output(command, shell=True, universal_newlines=True)
     except Exception:
         optional_output = "Result is absent."
         logging.info(
-            "Optional command '%s' can't be executed, but it's not a problem at all. We can continue." % command)
+            "Optional command '%s' can't be executed, but it's not a problem at all. We can continue." % command
+        )
 
     return optional_output

@@ -11,22 +11,21 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     requests_served = 0
 
     def do_GET(self):
-        if self.path == '/':
+        if self.path == "/":
             self.do_status()
-        elif self.path.startswith('/history'):
+        elif self.path.startswith("/history"):
             self.do_history()
-        elif self.path == '/analyze':
+        elif self.path == "/analyze":
             self.do_analyze()
-        elif self.path.startswith('/analysis'):
+        elif self.path.startswith("/analysis"):
             self.do_analysis()
 
     def do_status(self):
         self.send_response(200)
         self.end_headers()
-        f = open('/tmp/cerberus_status', 'rb')
+        f = open("/tmp/cerberus_status", "rb")
         self.wfile.write(f.read())
-        SimpleHTTPRequestHandler.requests_served = \
-            SimpleHTTPRequestHandler.requests_served + 1
+        SimpleHTTPRequestHandler.requests_served = SimpleHTTPRequestHandler.requests_served + 1
 
     def do_history(self):
         parsed = urlparse(self.path)
@@ -38,7 +37,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             dbcli.query(loopback)
             self.send_response(200)
             self.end_headers()
-            f = open('./history/cerberus_history.json', 'rb')
+            f = open("./history/cerberus_history.json", "rb")
             self.wfile.write(f.read())
         except Exception as e:
             self.send_error(404, "Encountered the following error: %s. Please retry" % e)
@@ -47,7 +46,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         try:
             self.send_response(200)
             self.end_headers()
-            f = open('./history/analysis.html', 'rb')
+            f = open("./history/analysis.html", "rb")
             self.wfile.write(f.read())
         except Exception as e:
             self.send_error(404, "Encountered the following error: %s. Please retry" % e)
@@ -64,7 +63,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             dbcli.custom_query(formdata)
             self.send_response(200)
             self.end_headers()
-            f = open('./history/cerberus_analysis.json', 'rb')
+            f = open("./history/cerberus_analysis.json", "rb")
             self.wfile.write(f.read())
         except Exception as e:
             self.send_error(404, "Encountered the following error: %s. Please retry" % e)
@@ -78,6 +77,9 @@ def start_server(address):
     try:
         _thread.start_new_thread(httpd.serve_forever, ())
     except Exception:
-        logging.error("Failed to start the http server \
-                      at http://%s:%s" % (server, port))
+        logging.error(
+            "Failed to start the http server \
+                      at http://%s:%s"
+            % (server, port)
+        )
         sys.exit(1)

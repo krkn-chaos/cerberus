@@ -20,11 +20,11 @@ This is a snippet of how would your slack config could look like within your `ce
 ```yaml
     watcher_slack_ID:
         Monday: U1234ABCD   # replace with your Slack ID from Profile-> More -> Copy Member ID
-        Tuesday:            # Same or different ID can be used for remaining days depending on who you want to tag 
-        Wednesday: 
-        Thursday: 
-        Friday: 
-        Saturday: 
-        Sunday: 
+        Tuesday:            # Same or different ID can be used for remaining days depending on who you want to tag
+        Wednesday:
+        Thursday:
+        Friday:
+        Saturday:
+        Sunday:
     slack_team_alias:   @group_or_team_id
 ```

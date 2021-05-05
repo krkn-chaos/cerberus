@@ -16,4 +16,3 @@ Please follow the instructions in the [installation](https://github.com/kubernet
 Once installed you will see node-problem-detector pods in openshift-node-problem-detector namespace.
 Now enable openshift-node-problem-detector in the [config.yaml](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml).
 Cerberus just monitors `KernelDeadlock` condition provided by the node problem detector as it is system critical and can hinder node performance.
-

@@ -18,6 +18,6 @@ function create_and_delete_pod {
         oc apply -f CI/tests/test-configs/hello_openshift_pod.yaml -n test-namespace
         kubectl wait --for=condition=Ready pod/hello-pod -n test-namespace
         sleep 2s
-        oc delete pods hello-pod -n test-namespace 
+        oc delete pods hello-pod -n test-namespace
     done
 }

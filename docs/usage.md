@@ -14,7 +14,7 @@ cerberus:
         - - https://...
           - Bearer ****                                  # This parameter is optional, specify authorization need for get call to route
         - - http://...
-    watch_master_schedulable:                            # When enabled checks for the schedulable 
+    watch_master_schedulable:                            # When enabled checks for the schedulable
         enabled: True                                     master nodes with given label.
         label: node-role.kubernetes.io/master
     watch_namespaces:                                    # List of namespaces to be monitored
@@ -26,14 +26,14 @@ cerberus:
         -    openshift-machine-api
         -    openshift-kube-scheduler
         -    openshift-ingress
-        -    openshift-sdn                                                
+        -    openshift-sdn
     cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
     inspect_components: False                            # Enable it only when OpenShift client is supported to run.
                                                          # When enabled, cerberus collects logs, events and metrics of failed components
 
     prometheus_url:                                      # The prometheus url/route is automatically obtained in case of OpenShift, please set it when the distribution is Kubernetes.
     prometheus_bearer_token:                             # The bearer token is automatically obtained in case of OpenShift, please set it when the distribution is Kubernetes. This is needed to authenticate with prometheus.
-                                                         # This enables Cerberus to query prometheus and alert on observing high Kube API Server latencies.   
+                                                         # This enables Cerberus to query prometheus and alert on observing high Kube API Server latencies.
 
     slack_integration: False                             # When enabled, cerberus reports status of failed iterations in the slack channel
                                                          # The following env vars need to be set: SLACK_API_TOKEN ( Bot User OAuth Access Token ) and SLACK_CHANNEL ( channel to send notifications in case of failures )

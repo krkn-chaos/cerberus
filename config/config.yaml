@@ -24,7 +24,7 @@ cerberus:
 
     prometheus_url:                                      # The prometheus url/route is automatically obtained in case of OpenShift, please set it when the distribution is Kubernetes.
     prometheus_bearer_token:                             # The bearer token is automatically obtained in case of OpenShift, please set it when the distribution is Kubernetes. This is needed to authenticate with prometheus.
-                                                         # This enables Cerberus to query prometheus and alert on observing high Kube API Server latencies. 
+                                                         # This enables Cerberus to query prometheus and alert on observing high Kube API Server latencies.
 
     slack_integration: False                             # When enabled, cerberus reports the failed iterations in the slack channel
                                                          # The following env vars needs to be set: SLACK_API_TOKEN ( Bot User OAuth Access Token ) and SLACK_CHANNEL ( channel to send notifications in case of failures )

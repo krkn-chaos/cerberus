@@ -11,4 +11,3 @@
 2. Modify the python code and yaml files to address your needs.
 3. Execute `podman build -t <new_image_name>:latest -f Dockerfile-ppc64le` in the containers directory within cerberus to build an image from the Dockerfile for Power.
 4. Execute `podman run --detach --name <container_name> <new_image_name>:latest` to start a container based on your new image.
-

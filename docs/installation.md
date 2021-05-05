@@ -7,7 +7,7 @@ Following ways are supported to run Cerberus:
 - Kubernetes or OpenShift deployment
 
 **NOTE**: Only OpenShift 4.x versions are tested.
- 
+
 
 ## Git
 ```
