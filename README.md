@@ -25,7 +25,7 @@ Cluster Operators                    | Watches all Cluster Operators            
 Masters Schedulability               | Watches and warns if masters nodes are marked as schedulable                                                     | :heavy_check_mark:        |
 Routes                               | Watches specified routes                                                                                         | :heavy_check_mark:        |
 CSRs                                 | Warns if any CSRs are not approved                                                                               | :heavy_check_mark:        |
-Critical Alerts                      | Warns the user on observing abnormal behavior which might effect the health of the cluster                       | :heavy_check_mark:        |            
+Critical Alerts                      | Warns the user on observing abnormal behavior which might effect the health of the cluster                       | :heavy_check_mark:        |
 Bring your own checks                | Users can bring their own checks and Ceberus runs and includes them in the reporting as wells as go/no-go signal | :heavy_check_mark:        |
 
 **NOTE**: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned in the [config](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml) by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
@@ -67,7 +67,7 @@ Refer to [example_check](https://github.com/openshift-scale/cerberus/blob/master
 
 ### Alerts
 Monitoring metrics and alerting on abnormal behavior is critical as they are the indicators for clusters health. Information on supported alerts can be found at [alerts](docs/alerts.md).
- 
+
 
 
 ### Use cases
@@ -92,7 +92,7 @@ There can be number of use cases, here are some of them:
 
 
 ### Contributions
-We are always looking for more enhancements, fixes to make it better, any contributions are most welcome. Feel free to report or work on the issues filed on github. 
+We are always looking for more enhancements, fixes to make it better, any contributions are most welcome. Feel free to report or work on the issues filed on github.
 
 [More information on how to Contribute](docs/contribute.md)
 

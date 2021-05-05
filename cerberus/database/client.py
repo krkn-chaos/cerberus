@@ -7,7 +7,7 @@ import cerberus.invoke.command as runcommand
 
 
 def get_time(timestamp):
-    return int(time.mktime(datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').timetuple()))
+    return int(time.mktime(datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").timetuple()))
 
 
 def set_db_path(database_path):
@@ -41,8 +41,7 @@ def insert(timestamp, time, count, issue, names, component):
     timestamp = timestamp.replace(microsecond=0)
     time = int(time)
     for name in names:
-        crsr.execute("insert into Failures values (?, ?, ?, ?, ?, ?)",
-                     (timestamp, time, count, issue, name, component))
+        crsr.execute("insert into Failures values (?, ?, ?, ?, ?, ?)", (timestamp, time, count, issue, name, component))
     connection.commit()
 
 
@@ -51,11 +50,12 @@ def query(loopback):
     crsr = connection.cursor()
     finish_time = int(time.time())
     start_time = finish_time - loopback
-    command = "select timestamp, count, issue, name, component from Failures where " \
-              "time >= " + str(start_time) + " and time <= " + str(finish_time)
+    command = "select timestamp, count, issue, name, component from Failures where " "time >= " + str(
+        start_time
+    ) + " and time <= " + str(finish_time)
     crsr.execute(command)
     fetched_data = crsr.fetchall()
-    create_json(fetched_data, 'cerberus_history.json')
+    create_json(fetched_data, "cerberus_history.json")
 
 
 def custom_query(filters):
@@ -93,28 +93,33 @@ def custom_query(filters):
         command += "time <= " + str(finish_time) + " and "
 
     if issue:
-        command += "issue in " + str(issue + ('', )) + " and "
+        command += "issue in " + str(issue + ("",)) + " and "
     if name:
-        command += "name in " + str(name + ('', )) + " and "
+        command += "name in " + str(name + ("",)) + " and "
     if component:
-        command += "component in " + str(component + ('', )) + " and "
+        command += "component in " + str(component + ("",)) + " and "
 
-    command = command.strip().rsplit(' ', 1)[0]
+    command = command.strip().rsplit(" ", 1)[0]
 
     crsr.execute(command)
     fetched_data = crsr.fetchall()
 
-    create_json(fetched_data, 'cerberus_analysis.json')
+    create_json(fetched_data, "cerberus_analysis.json")
 
 
 def create_json(fetched_data, file_name):
     failures = []
     for data in fetched_data:
-        failure = {"timestamp": data[0], "count": data[1], "issue": data[2],
-                   "name": data[3], "component": data[4]}
+        failure = {
+            "timestamp": data[0],
+            "count": data[1],
+            "issue": data[2],
+            "name": data[3],
+            "component": data[4],
+        }
         failures.append(failure)
 
     history = {"history": {"failures": failures}}
 
-    with open('./history/' + file_name, 'w+') as file:
-        json.dump(history, file, indent=4, separators=(',', ': '))
+    with open("./history/" + file_name, "w+") as file:
+        json.dump(history, file, indent=4, separators=(",", ": "))

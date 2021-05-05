@@ -3,7 +3,7 @@ kind: Pod
 apiVersion: v1
 metadata:
   name: hello-pod
-  creationTimestamp: 
+  creationTimestamp:
   labels:
     name: hello-openshift
 spec:

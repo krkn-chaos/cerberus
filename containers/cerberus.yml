@@ -5,7 +5,7 @@ metadata:
   name: cerberus-deployment
 spec:
   replicas: 1
-  selector: 
+  selector:
     matchLabels:
       tool: Cerberus
   template:

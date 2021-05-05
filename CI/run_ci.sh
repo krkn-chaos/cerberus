@@ -4,7 +4,7 @@ test_rc=0
 diff_list=`git diff --name-only origin/master`
 echo -e "List of files changed : ${diff_list} \n"
 
-test_list=`cat CI/tests/test_list` 
+test_list=`cat CI/tests/test_list`
 
 echo "running test suit consisting of ${test_list}"
 
@@ -70,12 +70,10 @@ if [ `grep -c Failed ci_results` -gt 0 ]
 then
   test_rc=1
 fi
-  
+
 # Clean up our created directories
 rm -rf gold test_* ci_results
 
 cat results.markdown
 
-exit $test_rc 
-
-
+exit $test_rc
