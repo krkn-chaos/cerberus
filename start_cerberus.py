@@ -71,6 +71,7 @@ def main(cfg):
         watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", False)
         watch_namespaces = config["cerberus"].get("watch_namespaces", [])
         watch_url_routes = config["cerberus"].get("watch_url_routes", [])
+        watch_master_schedulable = config["cerberus"].get("watch_master_schedulable", {})
         cerberus_publish_status = config["cerberus"].get("cerberus_publish_status", False)
         inspect_components = config["cerberus"].get("inspect_components", False)
         slack_integration = config["cerberus"].get("slack_integration", False)
@@ -138,8 +139,17 @@ def main(cfg):
             logging.info("Detailed inspection of failed components has been enabled")
             inspect.delete_inspect_directory()
 
-        # get list of all master nodes to verify scheduling
-        master_nodes = kubecli.list_nodes("node-role.kubernetes.io/master")
+        # get list of all master nodes with provided labels in the config
+        master_nodes = []
+        master_label = ""
+        if watch_master_schedulable["enabled"]:
+            master_label = watch_master_schedulable["label"]
+            nodes = kubecli.list_nodes(master_label)
+            if len(nodes) == 0:
+                logging.error("No master node found for the label %s. Please check master node config." % (master_label)) # noqa
+                sys.exit(1)
+            else:
+                master_nodes.extend(nodes)
 
         # Use cluster_info to get the api server url
         api_server_url = cluster_info.split(" ")[-1].strip() + "/healthz"
@@ -212,7 +222,7 @@ def main(cfg):
                     (watch_cluster_operators_status, failed_operators), (failed_routes) = \
                     pool.map(smap, [functools.partial(kubecli.is_url_available, api_server_url),
                                     functools.partial(kubecli.process_master_taint,
-                                                      master_nodes, iteration, iter_track_time),
+                                                      master_nodes, master_label, iteration, iter_track_time),
                                     functools.partial(kubecli.process_nodes, watch_nodes,
                                                       iteration, iter_track_time),
                                     functools.partial(kubecli.process_cluster_operator,

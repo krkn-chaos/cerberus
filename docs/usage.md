@@ -14,6 +14,9 @@ cerberus:
         - - https://...
           - Bearer ****                                  # This parameter is optional, specify authorization need for get call to route
         - - http://...
+    watch_master_schedulable:                            # When enabled checks for the schedulable 
+        enabled: True                                     master nodes with given label.
+        label: node-role.kubernetes.io/master
     watch_namespaces:                                    # List of namespaces to be monitored
         -    openshift-etcd
         -    openshift-apiserver
@@ -23,7 +26,7 @@ cerberus:
         -    openshift-machine-api
         -    openshift-kube-scheduler
         -    openshift-ingress
-        -    openshift-sdn
+        -    openshift-sdn                                                
     cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
     inspect_components: False                            # Enable it only when OpenShift client is supported to run.
                                                          # When enabled, cerberus collects logs, events and metrics of failed components
