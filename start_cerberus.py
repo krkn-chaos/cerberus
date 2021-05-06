@@ -106,9 +106,9 @@ def main(cfg):
         # Cluster info
         logging.info("Fetching cluster info")
         if distribution == "openshift":
-            cluster_version = runcommand.invoke("kubectl get clusterversion")
+            cluster_version = runcommand.invoke("oc get clusterversion")
             logging.info("\n%s" % (cluster_version))
-        cluster_info = runcommand.invoke("kubectl cluster-info | awk 'NR==1' | sed -r "
+        cluster_info = runcommand.invoke("oc cluster-info | awk 'NR==1' | sed "
                                          "'s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g'")  # noqa
         logging.info("%s" % (cluster_info))
 
