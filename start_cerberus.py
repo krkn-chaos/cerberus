@@ -146,9 +146,7 @@ def main(cfg):
             master_label = watch_master_schedulable["label"]
             nodes = kubecli.list_nodes(master_label)
             if len(nodes) == 0:
-                logging.error("No master node found for the label %s \
-                Either set this label to False or add proper labels \
-                in the config" % (master_label))
+                logging.error("No master node found for the label %s. Please check master node config." % (master_label)) # noqa
                 sys.exit(1)
             else:
                 master_nodes.extend(nodes)
