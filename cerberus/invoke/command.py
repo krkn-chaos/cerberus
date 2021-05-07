@@ -2,6 +2,7 @@ import subprocess
 import logging
 import sys
 
+
 # Invokes a given command and returns the stdout
 def invoke(command):
     output = ""
