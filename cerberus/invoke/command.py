@@ -4,7 +4,7 @@ import sys
 
 
 # Invokes a given command and returns the stdout.
-# Will stop Cerberus execution with UnboundLocalError in case of exception.
+# Will stop Cerberus execution with exit code 1.
 def invoke(command):
     output = ""
     try:
