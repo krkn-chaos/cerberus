@@ -335,7 +335,10 @@ def main(cfg):
                     pending_csr = []
                     for csr in csrs["items"]:
                         # find csr status
-                        if "Approved" not in csr["status"]["conditions"][0]["type"]:
+                        if "conditions" in csr["status"]:
+                            if "Approved" not in csr["status"]["conditions"][0]["type"]:
+                                pending_csr.append(csr["metadata"]["name"])
+                        else:
                             pending_csr.append(csr["metadata"]["name"])
                     if pending_csr:
                         logging.warning("There are CSR's that are currently not approved")
