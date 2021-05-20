@@ -27,8 +27,7 @@ Its possible to run within a docker network, where you have appropriate configur
     start_cerberus.py -c config/config.yaml`
 
 `docker build -t "$KRAKEN_CONTAINER-runner":latest -f "$(pwd)/docker/kraken/Dockerfile" .`
-
-Where Dockerfile is:
+The Dockerfile includes setuptools:
 `FROM quay.io/openshift-scale/kraken
  RUN pip3 install -U setuptools`
     
