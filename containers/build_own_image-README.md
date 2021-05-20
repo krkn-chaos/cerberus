@@ -14,6 +14,7 @@
 
 # Running in a docker network with Kraken
 Its possible to run within a docker network, where you have appropriate configured your config so that each individual tool is working correctly for your cluster, here are examples of how you achieve this:
+
 `docker run -d -e LANG="en_US.UTF-8"  \
     -v "$(pwd)/config/cerberus/default_config.yml":/root/cerberus/config/config.yaml \
     -v "$KUBE_TMP":/root/.kube/config \
@@ -27,7 +28,8 @@ Its possible to run within a docker network, where you have appropriate configur
     start_cerberus.py -c config/config.yaml`
 
 `docker build -t "$KRAKEN_CONTAINER-runner":latest -f "$(pwd)/docker/kraken/Dockerfile" .`
-The Dockerfile includes setuptools:
+\
+The Dockerfile includes setuptools: \
 `FROM quay.io/openshift-scale/kraken
  RUN pip3 install -U setuptools`
     
@@ -48,4 +50,4 @@ If you encounter encoding issues when running the containerized version such as:
 
 it is possible to overcome by specifying the locale for encoding by adding a parameter to your step 4 above:
 
-Execute `podman run --detach -e LANG="en_US.UTF-8" --name <container_name> <new_image_name>:latest`.
+Execute `podman run --detach -e LANG="en_US.UTF-8" --name <container_name> <new_image_name>:latest`
