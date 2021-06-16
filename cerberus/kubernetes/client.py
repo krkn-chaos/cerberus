@@ -17,11 +17,13 @@ pods_tracker = defaultdict(dict)
 
 
 # Load kubeconfig and initialize kubernetes python client
-def initialize_clients(kubeconfig_path, chunk_size):
+def initialize_clients(kubeconfig_path, chunk_size, timeout):
     global cli
     global request_chunk_size
+    global cmd_timeout
     config.load_kube_config(kubeconfig_path)
     cli = client.CoreV1Api()
+    cmd_timeout = timeout
     request_chunk_size = str(chunk_size)
 
 
@@ -46,7 +48,7 @@ def list_pods(namespace):
     try:
         ret = cli.list_namespaced_pod(namespace, pretty=True)
     except ApiException as e:
-        logging.error("Exception when calling CoreV1Api->list_namespaced_pod: %s\n", e)
+        logging.error("Exception when calling CoreV1Api->list_namespaced_pod: %s\n" % e)
     for pod in ret.items:
         pods.append(pod.metadata.name)
     return pods
@@ -58,7 +60,7 @@ def list_namespaces():
     try:
         ret = cli.list_namespace(pretty=True)
     except ApiException as e:
-        logging.error("Exception when calling CoreV1Api->list_namespaced_pod: %s\n", e)
+        logging.error("Exception when calling CoreV1Api->list_namespaced_pod: %s\n" % e)
     for namespace in ret.items:
         namespaces.append(namespace.metadata.name)
     return namespaces
@@ -69,7 +71,7 @@ def get_node_info(node):
     try:
         return cli.read_node_status(node, pretty=True)
     except ApiException as e:
-        logging.error("Exception when calling CoreV1Api->read_node_status: %s\n", e)
+        logging.error("Exception when calling CoreV1Api->read_node_status: %s\n" % e)
 
 
 # Get status of a pod in a namespace
@@ -77,12 +79,12 @@ def get_pod_status(pod, namespace):
     try:
         return cli.read_namespaced_pod_status(pod, namespace, pretty=True)
     except ApiException as e:
-        logging.error("Exception when calling CoreV1Api->read_namespaced_pod_status: %s\n", e)
+        logging.error("Exception when calling CoreV1Api->read_namespaced_pod_status: %s\n" % e)
 
 
 # Outputs a json blob with information about all the nodes
 def get_all_nodes_info():
-    nodes_info = runcommand.invoke("kubectl get nodes --chunk-size " + request_chunk_size + " -o json")  # noqa
+    nodes_info = runcommand.invoke("kubectl get nodes --chunk-size " + request_chunk_size + " -o json", cmd_timeout)
     nodes_info = json.loads(nodes_info)
     return nodes_info
 
@@ -90,8 +92,8 @@ def get_all_nodes_info():
 # Outputs a json blob with informataion about all pods in a given namespace
 def get_all_pod_info(namespace):
     all_pod_info = runcommand.invoke(
-        "kubectl get pods --chunk-size " + request_chunk_size + " -n " + namespace + " -o json"
-    )  # noqa
+        "kubectl get pods --chunk-size " + request_chunk_size + " -n " + namespace + " -o json", cmd_timeout
+    )
     all_pod_info = json.loads(all_pod_info)
     return all_pod_info
 
@@ -204,10 +206,7 @@ def namespace_sleep_tracker(namespace, pods_tracker):
                 crashed_restarted_pods[namespace].append((pod, "crash"))
                 if pod_restart_count != 0:
                     crashed_restarted_pods[namespace].append((pod, "restart", pod_restart_count))
-                pods_tracker[pod] = {
-                    "creation_timestamp": pod_creation_timestamp,
-                    "restart_count": pod_restart_count,
-                }
+                pods_tracker[pod] = {"creation_timestamp": pod_creation_timestamp, "restart_count": pod_restart_count}
     return crashed_restarted_pods
 
 
@@ -255,7 +254,7 @@ def process_namespace(iteration, namespace, failed_pods_components, failed_pod_c
 
 # Get cluster operators and return yaml
 def get_cluster_operators():
-    operators_status = runcommand.invoke("kubectl get co -o yaml")
+    operators_status = runcommand.invoke("kubectl get co -o yaml", cmd_timeout)
     status_yaml = yaml.load(operators_status, Loader=yaml.FullLoader)
     return status_yaml
 
@@ -295,7 +294,7 @@ def process_cluster_operator(distribution, watch_cluster_operators, iteration, i
 # Check for NoSchedule taint in all the master nodes
 def check_master_taint(master_nodes, master_label):
     schedulable_masters = []
-    all_master_info = runcommand.invoke("kubectl get nodes " + " ".join(master_nodes) + " -o json")
+    all_master_info = runcommand.invoke("kubectl get nodes " + " ".join(master_nodes) + " -o json", cmd_timeout)
     all_master_info = json.loads(all_master_info)
     if len(master_nodes) > 1:
         all_master_info = all_master_info["items"]
@@ -353,6 +352,6 @@ def process_routes(watch_url_routes, iter_track_time):
 
 # Get CSR's in yaml format
 def get_csrs():
-    csr_string = runcommand.invoke("oc get csr -o yaml")
+    csr_string = runcommand.invoke("oc get csr -o yaml", cmd_timeout)
     csr_yaml = yaml.load(csr_string, Loader=yaml.FullLoader)
     return csr_yaml

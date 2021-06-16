@@ -80,6 +80,7 @@ def main(cfg):
         custom_checks = config["cerberus"].get("custom_checks", [])
         iterations = config["tunings"].get("iterations", 0)
         sleep_time = config["tunings"].get("sleep_time", 0)
+        cmd_timeout = config["tunings"].get("timeout", 60)
         request_chunk_size = config["tunings"].get("kube_api_request_chunk_size", 250)
         daemon_mode = config["tunings"].get("daemon_mode", False)
         cores_usage_percentage = config["tunings"].get("cores_usage_percentage", 0.5)
@@ -93,7 +94,7 @@ def main(cfg):
         if not os.path.isfile(kubeconfig_path):
             kubeconfig_path = None
         logging.info("Initializing client to talk to the Kubernetes cluster")
-        kubecli.initialize_clients(kubeconfig_path, request_chunk_size)
+        kubecli.initialize_clients(kubeconfig_path, request_chunk_size, cmd_timeout)
 
         if "openshift-sdn" in watch_namespaces:
             sdn_namespace = kubecli.check_sdn_namespace()

@@ -1,17 +1,15 @@
 import subprocess
 import logging
-import sys
 
 
 # Invokes a given command and returns the stdout.
 # Will stop Cerberus execution with exit code 1.
-def invoke(command):
+def invoke(command, timeout=60):
     output = ""
     try:
-        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        output = subprocess.check_output(command, shell=True, universal_newlines=True, timeout=timeout)
     except Exception:
         logging.error("Failed to run %s" % (command))
-        sys.exit(1)
     return output
 
 
