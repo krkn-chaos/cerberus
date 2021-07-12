@@ -28,9 +28,7 @@ CSRs                                 | Warns if any CSRs are not approved       
 Critical Alerts                      | Warns the user on observing abnormal behavior which might effect the health of the cluster                       | :heavy_check_mark:        |
 Bring your own checks                | Users can bring their own checks and Ceberus runs and includes them in the reporting as wells as go/no-go signal | :heavy_check_mark:        |
 
-**NOTE**: It supports monitoring pods in any namespaces specified in the config, the watch is enabled for system components mentioned in the [config](https://github.com/openshift-scale/cerberus/blob/master/config/config.yaml) by default as they are critical for running the operations on Kubernetes/OpenShift clusters.
-
-
+An explanation of all the components that Cerberus can monitor are explained [here](docs/config.md)
 
 ### How does Cerberus report cluster health?
 Cerberus exposes the cluster health and failures through a go/no-go signal, report and metrics API.
