@@ -92,7 +92,9 @@ def main(cfg):
 
         # Initialize clients and set kube api request chunk size
         if not os.path.isfile(kubeconfig_path):
-            kubeconfig_path = None
+            logging.error("Proper kubeconfig not set, please set proper kubeconfig path")
+            sys.exit(1)
+        os.environ["KUBECONFIG"] = str(kubeconfig_path)
         logging.info("Initializing client to talk to the Kubernetes cluster")
         kubecli.initialize_clients(kubeconfig_path, request_chunk_size, cmd_timeout)
 
