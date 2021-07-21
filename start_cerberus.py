@@ -38,6 +38,14 @@ def publish_cerberus_status(status):
         file.write(str(status))
 
 
+def get_cerberus_status():
+    with open("/tmp/cerberus_status", "r") as file:
+        status = file.read()
+    if status.lower() == "true":
+        return 0
+    return 1
+
+
 # Create a json file of operation timings
 def record_time(time_tracker):
     if time_tracker:
@@ -92,7 +100,9 @@ def main(cfg):
 
         # Initialize clients and set kube api request chunk size
         if not os.path.isfile(kubeconfig_path):
-            kubeconfig_path = None
+            logging.error("Proper kubeconfig not set, please set proper kubeconfig path")
+            sys.exit(1)
+        os.environ["KUBECONFIG"] = str(kubeconfig_path)
         logging.info("Initializing client to talk to the Kubernetes cluster")
         kubecli.initialize_clients(kubeconfig_path, request_chunk_size, cmd_timeout)
 
@@ -490,6 +500,10 @@ def main(cfg):
             record_time(time_tracker)
             pool.close()
             pool.join()
+            if cerberus_publish_status:
+                final_status = get_cerberus_status()
+                logging.info("Final number status" + str(final_status))
+                sys.exit(final_status)
     else:
         logging.error("Could not find a config at %s, please check" % (cfg))
         sys.exit(1)

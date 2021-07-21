@@ -8,8 +8,9 @@ def invoke(command, timeout=60):
     output = ""
     try:
         output = subprocess.check_output(command, shell=True, universal_newlines=True, timeout=timeout)
-    except Exception:
+    except Exception as e:
         logging.error("Failed to run %s" % (command))
+        logging.error("Error: " + str(e))
     return output
 
 
