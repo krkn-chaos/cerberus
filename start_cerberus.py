@@ -38,6 +38,15 @@ def publish_cerberus_status(status):
         file.write(str(status))
 
 
+def print_final_status_json(iterations, cerberus_status, exit_status_code):
+    status_json = {"iterations": iterations, "cluster_health": cerberus_status, "exit_status": exit_status_code}
+
+    with open("final_cerberus_info.json", "w") as file:
+        file.write(str(status_json))
+
+    logging.info("Final status information written to final_cerberus_info.json")
+
+
 # Create a json file of operation timings
 def record_time(time_tracker):
     if time_tracker:
@@ -93,6 +102,7 @@ def main(cfg):
         # Initialize clients and set kube api request chunk size
         if not os.path.isfile(kubeconfig_path):
             logging.error("Proper kubeconfig not set, please set proper kubeconfig path")
+            print_final_status_json(-1, "Unknown", 1)
             sys.exit(1)
         os.environ["KUBECONFIG"] = str(kubeconfig_path)
         logging.info("Initializing client to talk to the Kubernetes cluster")
@@ -155,6 +165,7 @@ def main(cfg):
                 logging.error(
                     "No master node found for the label %s. Please check master node config." % (master_label)
                 )  # noqa
+                print_final_status_json(-1, "Unknown", 1)
                 sys.exit(1)
             else:
                 master_nodes.extend(nodes)
@@ -194,6 +205,8 @@ def main(cfg):
         else:
             iterations = int(iterations)
 
+        # Need to set start to cerberus_status
+        cerberus_status = True
         # Loop to run the components status checks starts here
         while int(iteration) < iterations:
             try:
@@ -478,6 +491,7 @@ def main(cfg):
                 pool.join()
                 logging.info("Terminating cerberus monitoring")
                 record_time(time_tracker)
+                print_final_status_json(iteration, cerberus_status, 1)
                 sys.exit(1)
 
             except Exception as e:
@@ -485,6 +499,7 @@ def main(cfg):
                 logging.info("Exception: %s\n" % (e))
                 if cerberus_publish_status:
                     publish_cerberus_status(False)
+                    cerberus_status = False
                 continue
 
         else:
@@ -492,8 +507,13 @@ def main(cfg):
             record_time(time_tracker)
             pool.close()
             pool.join()
+            if cerberus_publish_status:
+                print_final_status_json(iterations, cerberus_status, 0)
+                sys.exit(0)
     else:
         logging.error("Could not find a config at %s, please check" % (cfg))
+        print_final_status_json(-1, "Unknown", 1)
+
         sys.exit(1)
 
 
@@ -501,7 +521,11 @@ if __name__ == "__main__":
     # Initialize the parser to read the config
     parser = optparse.OptionParser()
     parser.add_option(
-        "-c", "--config", dest="cfg", help="config location", default="config/config.yaml",
+        "-c",
+        "--config",
+        dest="cfg",
+        help="config location",
+        default="config/config.yaml",
     )
     (options, args) = parser.parse_args()
     logging.basicConfig(

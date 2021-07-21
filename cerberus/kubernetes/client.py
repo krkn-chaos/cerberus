@@ -1,7 +1,6 @@
 import re
 import sys
 import yaml
-import json
 import time
 import logging
 import requests
@@ -15,16 +14,20 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 pods_tracker = defaultdict(dict)
 
+kubeconfig_path_global = ""
+
 
 # Load kubeconfig and initialize kubernetes python client
 def initialize_clients(kubeconfig_path, chunk_size, timeout):
     global cli
     global request_chunk_size
     global cmd_timeout
+    global kubeconfig_path_global
     config.load_kube_config(kubeconfig_path)
     cli = client.CoreV1Api()
     cmd_timeout = timeout
     request_chunk_size = str(chunk_size)
+    kubeconfig_path_global = kubeconfig_path
 
 
 # List nodes in the cluster
@@ -32,9 +35,9 @@ def list_nodes(label_selector=None):
     nodes = []
     try:
         if label_selector:
-            ret = cli.list_node(pretty=True, label_selector=label_selector)
+            ret = cli.list_node(pretty=True, label_selector=label_selector, limit=request_chunk_size)
         else:
-            ret = cli.list_node(pretty=True)
+            ret = cli.list_node(pretty=True, limit=request_chunk_size)
     except ApiException as e:
         logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
     for node in ret.items:
@@ -42,25 +45,13 @@ def list_nodes(label_selector=None):
     return nodes
 
 
-# List pods in the given namespace
-def list_pods(namespace):
-    pods = []
-    try:
-        ret = cli.list_namespaced_pod(namespace, pretty=True)
-    except ApiException as e:
-        logging.error("Exception when calling CoreV1Api->list_namespaced_pod: %s\n" % e)
-    for pod in ret.items:
-        pods.append(pod.metadata.name)
-    return pods
-
-
 # List all namespaces
 def list_namespaces():
     namespaces = []
     try:
-        ret = cli.list_namespace(pretty=True)
+        ret = cli.list_namespace(pretty=True, limit=request_chunk_size)
     except ApiException as e:
-        logging.error("Exception when calling CoreV1Api->list_namespaced_pod: %s\n" % e)
+        logging.error("Exception when calling CoreV1Api->list_namespace: %s\n" % e)
     for namespace in ret.items:
         namespaces.append(namespace.metadata.name)
     return namespaces
@@ -84,19 +75,20 @@ def get_pod_status(pod, namespace):
 
 # Outputs a json blob with information about all the nodes
 def get_all_nodes_info():
-    nodes_info = runcommand.invoke("kubectl get nodes --chunk-size " + request_chunk_size + " -o json", cmd_timeout)
-    nodes_info = json.loads(nodes_info)
-    return nodes_info
+    try:
+        return cli.list_node(limit=request_chunk_size)
+    except ApiException as e:
+        logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
 
 
 # Outputs a json blob with informataion about all pods in a given namespace
 def get_all_pod_info(namespace):
-    all_pod_info = runcommand.invoke(
-        "kubectl get pods --chunk-size " + request_chunk_size + " -n " + namespace + " -o json", cmd_timeout
-    )
-    if all_pod_info != "":
-        all_pod_info = json.loads(all_pod_info)
-    return all_pod_info
+    try:
+        ret = cli.list_namespaced_pod(namespace, pretty=True, limit=request_chunk_size)
+    except ApiException as e:
+        logging.error("Exception when calling CoreV1Api->list_namespaced_pod: %s\n" % e)
+
+    return ret
 
 
 # Check if all the watch_namespaces are valid
@@ -118,7 +110,7 @@ def check_namespaces(namespaces):
             raise Exception("There exists no namespaces matching: %s" % (invalid_namespaces))
         return list(final_namespaces)
     except Exception as e:
-        logging.info("%s" % (e))
+        logging.info("check namespaces error%s" % (e))
         sys.exit(1)
 
 
@@ -140,14 +132,14 @@ def check_sdn_namespace():
 def monitor_nodes():
     notready_nodes = []
     all_nodes_info = get_all_nodes_info()
-    for node_info in all_nodes_info["items"]:
-        node = node_info["metadata"]["name"]
+    for node_info in all_nodes_info.items:
+        node = node_info.metadata.name
         node_kerneldeadlock_status = "False"
-        for condition in node_info["status"]["conditions"]:
-            if condition["type"] == "KernelDeadlock":
-                node_kerneldeadlock_status = condition["status"]
-            elif condition["type"] == "Ready":
-                node_ready_status = condition["status"]
+        for condition in node_info.status.conditions:
+            if condition.type == "KernelDeadlock":
+                node_kerneldeadlock_status = condition.status
+            elif condition.type == "Ready":
+                node_ready_status = condition.status
             else:
                 continue
         if node_kerneldeadlock_status != "False" or node_ready_status != "True":
@@ -175,20 +167,22 @@ def process_nodes(watch_nodes, iteration, iter_track_time):
 def namespace_sleep_tracker(namespace, pods_tracker):
     crashed_restarted_pods = defaultdict(list)
     all_pod_info = get_all_pod_info(namespace)
-    if all_pod_info != "" and len(all_pod_info) > 0:
-        for pod_info in all_pod_info["items"]:
-            pod = pod_info["metadata"]["name"]
-            pod_status = pod_info["status"]
-            pod_status_phase = pod_status["phase"]
+    if all_pod_info is not None and all_pod_info != "":
+        for pod_info in all_pod_info.items:
+            pod = pod_info.metadata.name
+            pod_status = pod_info.status
+            pod_status_phase = pod_status.phase
             pod_restart_count = 0
+
             if pod_status_phase != "Succeeded":
-                pod_creation_timestamp = pod_info["metadata"]["creationTimestamp"]
-                if "containerStatuses" in pod_status:
-                    for container in pod_status["containerStatuses"]:
-                        pod_restart_count += container["restartCount"]
-                if "initContainerStatuses" in pod_status:
-                    for container in pod_status["initContainerStatuses"]:
-                        pod_restart_count += container["restartCount"]
+                pod_creation_timestamp = pod_info.metadata.creation_timestamp
+                if pod_status.container_statuses is not None:
+                    for container in pod_status.container_statuses:
+                        pod_restart_count += container.restart_count
+                if pod_status.init_container_statuses is not None:
+                    for container in pod_status.init_container_statuses:
+                        pod_restart_count += container.restart_count
+
                 if pod in pods_tracker:
                     if (
                         pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp
@@ -221,27 +215,27 @@ def monitor_namespace(namespace):
     notready_pods = set()
     notready_containers = defaultdict(list)
     all_pod_info = get_all_pod_info(namespace)
-    if all_pod_info != "" and len(all_pod_info) > 0:
-        for pod_info in all_pod_info["items"]:
-            pod = pod_info["metadata"]["name"]
-            pod_status = pod_info["status"]
-            pod_status_phase = pod_status["phase"]
+    if all_pod_info is not None and all_pod_info != "":
+        for pod_info in all_pod_info.items:
+            pod = pod_info.metadata.name
+            pod_status = pod_info.status
+            pod_status_phase = pod_status.phase
             if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
                 notready_pods.add(pod)
             if pod_status_phase != "Succeeded":
-                if "conditions" in pod_status:
-                    for condition in pod_status["conditions"]:
-                        if condition["type"] == "Ready" and condition["status"] == "False":
+                if pod_status.conditions is not None:
+                    for condition in pod_status.conditions:
+                        if condition.type == "Ready" and condition.status == "False":
                             notready_pods.add(pod)
-                        if condition["type"] == "ContainersReady" and condition["status"] == "False":
-                            if "containerStatuses" in pod_status:
-                                for container in pod_status["containerStatuses"]:
-                                    if not container["ready"]:
-                                        notready_containers[pod].append(container["name"])
-                            if "initContainerStatuses" in pod_status:
-                                for container in pod_status["initContainerStatuses"]:
-                                    if not container["ready"]:
-                                        notready_containers[pod].append(container["name"])
+                        if condition.type == "ContainersReady" and condition.status == "False":
+                            if pod_status.container_statuses is not None:
+                                for container in pod_status.container_statuses:
+                                    if not container.ready:
+                                        notready_containers[pod].append(container.name)
+                            if pod_status.init_container_statuses is not None:
+                                for container in pod_status.init_container_statuses:
+                                    if not container.ready:
+                                        notready_containers[pod].append(container.name)
     notready_pods = list(notready_pods)
     if notready_pods or notready_containers:
         status = False
@@ -260,7 +254,7 @@ def process_namespace(iteration, namespace, failed_pods_components, failed_pod_c
 
 # Get cluster operators and return yaml
 def get_cluster_operators():
-    operators_status = runcommand.invoke("kubectl get co -o yaml", cmd_timeout)
+    operators_status = runcommand.invoke("kubectl get co -o yaml --kubeconfig " + kubeconfig_path_global, cmd_timeout)
     status_yaml = yaml.load(operators_status, Loader=yaml.FullLoader)
     return status_yaml
 
@@ -300,23 +294,22 @@ def process_cluster_operator(distribution, watch_cluster_operators, iteration, i
 # Check for NoSchedule taint in all the master nodes
 def check_master_taint(master_nodes, master_label):
     schedulable_masters = []
-    all_master_info = runcommand.invoke("kubectl get nodes " + " ".join(master_nodes) + " -o json", cmd_timeout)
-    all_master_info = json.loads(all_master_info)
-    if len(master_nodes) > 1:
-        all_master_info = all_master_info["items"]
-    else:
-        all_master_info = [all_master_info]
-    for node_info in all_master_info:
-        node = node_info["metadata"]["name"]
+
+    for master_node in master_nodes:
+        node_info = get_node_info(master_node)
+        node = node_info.metadata.name
         NoSchedule_taint = False
         try:
-            for taint in node_info["spec"]["taints"]:
-                if taint["key"] == str(master_label) and taint["effect"] == "NoSchedule":
-                    NoSchedule_taint = True
-                    break
-            if not NoSchedule_taint:
-                schedulable_masters.append(node)
-        except Exception:
+            if node_info.spec is not None:
+                if node_info.spec.taints is not None:
+                    for taint in node_info.spec.taints:
+                        if taint.key == str(master_label) and taint.effect == "NoSchedule":
+                            NoSchedule_taint = True
+                            break
+                    if not NoSchedule_taint:
+                        schedulable_masters.append(node)
+        except Exception as e:
+            logging.info("Exception getting master nodes" + str(e))
             schedulable_masters.append(node)
     return schedulable_masters
 
@@ -361,6 +354,6 @@ def process_routes(watch_url_routes, iter_track_time):
 
 # Get CSR's in yaml format
 def get_csrs():
-    csr_string = runcommand.invoke("oc get csr -o yaml", cmd_timeout)
+    csr_string = runcommand.invoke("oc get csr -o yaml --kubeconfig " + kubeconfig_path_global, cmd_timeout)
     csr_yaml = yaml.load(csr_string, Loader=yaml.FullLoader)
     return csr_yaml
