@@ -300,10 +300,11 @@ def main(cfg):
                     logging.info("%s\n" % (failed_nodes))
                     dbcli.insert(datetime.now(), time.time(), 1, "not ready", failed_nodes, "node")
 
-                if not watch_cluster_operators_status:
+                if not watch_cluster_operators_status and distribution == "openshift" and watch_cluster_operators:
                     logging.info("Iteration %s: Failed operators" % (iteration))
                     logging.info("%s\n" % (failed_operators))
                     dbcli.insert(datetime.now(), time.time(), 1, "degraded", failed_operators, "cluster operator")
+                    pool.map(inspect.inspect_operator, failed_operators)
 
                 if not server_status:
                     logging.info(
