@@ -38,6 +38,14 @@ def publish_cerberus_status(status):
         file.write(str(status))
 
 
+def get_cerberus_status():
+    with open("/tmp/cerberus_status", "r") as file:
+        status = file.read()
+    if status.lower() == "true":
+        return 0
+    return 1
+
+
 # Create a json file of operation timings
 def record_time(time_tracker):
     if time_tracker:
@@ -70,6 +78,7 @@ def main(cfg):
         watch_nodes = config["cerberus"].get("watch_nodes", False)
         watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", False)
         watch_namespaces = config["cerberus"].get("watch_namespaces", [])
+        watch_terminating_namespaces = config["cerberus"].get("watch_terminating_namespaces", True)
         watch_url_routes = config["cerberus"].get("watch_url_routes", [])
         watch_master_schedulable = config["cerberus"].get("watch_master_schedulable", {})
         cerberus_publish_status = config["cerberus"].get("cerberus_publish_status", False)
@@ -229,6 +238,7 @@ def main(cfg):
                     (watch_nodes_status, failed_nodes),
                     (watch_cluster_operators_status, failed_operators),
                     (failed_routes),
+                    (terminating_namespaces),
                 ) = pool.map(
                     smap,
                     [
@@ -245,6 +255,13 @@ def main(cfg):
                             iter_track_time,
                         ),
                         functools.partial(kubecli.process_routes, watch_url_routes, iter_track_time),
+                        functools.partial(
+                            kubecli.monitor_namespaces_status,
+                            watch_namespaces,
+                            watch_terminating_namespaces,
+                            iteration,
+                            iter_track_time,
+                        ),
                     ],
                 )
 
@@ -317,6 +334,11 @@ def main(cfg):
                         dbcli.insert(datetime.now(), time.time(), 1, "pod crash", failures, component)
                     logging.info("")
 
+                watch_teminating_ns = True
+                if terminating_namespaces:
+                    watch_teminating_ns = False
+                    logging.info("Iteration %s: Terminating namespaces %s" % (iteration, str(terminating_namespaces)))
+
                 # Logging the failed checking of routes
                 watch_routes_status = True
                 if failed_routes:
@@ -334,6 +356,7 @@ def main(cfg):
                     and watch_cluster_operators_status
                     and server_status
                     and watch_routes_status
+                    and watch_teminating_ns
                 )
 
                 if distribution == "openshift":
@@ -492,6 +515,10 @@ def main(cfg):
             record_time(time_tracker)
             pool.close()
             pool.join()
+            if cerberus_publish_status:
+                final_status = get_cerberus_status()
+                logging.info("Final number status" + str(final_status))
+                sys.exit(final_status)
     else:
         logging.error("Could not find a config at %s, please check" % (cfg))
         sys.exit(1)
