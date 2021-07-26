@@ -249,6 +249,8 @@ def main(cfg):
                 # Increment api_fail_count if api server url is not ok
                 if not server_status:
                     api_fail_count += 1
+                else:
+                    api_fail_count = 0
 
                 # Initialize a shared_memory of type dict to share data between different processes
                 failed_pods_components = manager.dict()
@@ -293,7 +295,9 @@ def main(cfg):
                     logging.info(
                         "Iteration %s: Api Server is not healthy as reported by %s\n" % (iteration, api_server_url)
                     )
-                    dbcli.insert(datetime.now(), time.time(), 1, "unavailable", list(api_server_url), "api server")
+                    dbcli.insert(
+                        datetime.now(), time.time(), api_fail_count, "unavailable", list(api_server_url), "api server"
+                    )
 
                 if not watch_namespaces_status:
                     logging.info("Iteration %s: Failed pods and components" % (iteration))
