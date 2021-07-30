@@ -221,26 +221,27 @@ def monitor_namespace(namespace):
     notready_pods = set()
     notready_containers = defaultdict(list)
     all_pod_info = get_all_pod_info(namespace)
-    for pod_info in all_pod_info["items"]:
-        pod = pod_info["metadata"]["name"]
-        pod_status = pod_info["status"]
-        pod_status_phase = pod_status["phase"]
-        if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
-            notready_pods.add(pod)
-        if pod_status_phase != "Succeeded":
-            if "conditions" in pod_status:
-                for condition in pod_status["conditions"]:
-                    if condition["type"] == "Ready" and condition["status"] == "False":
-                        notready_pods.add(pod)
-                    if condition["type"] == "ContainersReady" and condition["status"] == "False":
-                        if "containerStatuses" in pod_status:
-                            for container in pod_status["containerStatuses"]:
-                                if not container["ready"]:
-                                    notready_containers[pod].append(container["name"])
-                        if "initContainerStatuses" in pod_status:
-                            for container in pod_status["initContainerStatuses"]:
-                                if not container["ready"]:
-                                    notready_containers[pod].append(container["name"])
+    if all_pod_info != "" and len(all_pod_info) > 0:
+        for pod_info in all_pod_info["items"]:
+            pod = pod_info["metadata"]["name"]
+            pod_status = pod_info["status"]
+            pod_status_phase = pod_status["phase"]
+            if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
+                notready_pods.add(pod)
+            if pod_status_phase != "Succeeded":
+                if "conditions" in pod_status:
+                    for condition in pod_status["conditions"]:
+                        if condition["type"] == "Ready" and condition["status"] == "False":
+                            notready_pods.add(pod)
+                        if condition["type"] == "ContainersReady" and condition["status"] == "False":
+                            if "containerStatuses" in pod_status:
+                                for container in pod_status["containerStatuses"]:
+                                    if not container["ready"]:
+                                        notready_containers[pod].append(container["name"])
+                            if "initContainerStatuses" in pod_status:
+                                for container in pod_status["initContainerStatuses"]:
+                                    if not container["ready"]:
+                                        notready_containers[pod].append(container["name"])
     notready_pods = list(notready_pods)
     if notready_pods or notready_containers:
         status = False
