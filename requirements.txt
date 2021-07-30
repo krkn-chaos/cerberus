@@ -1,5 +1,5 @@
 setuptools
-PyYAML
+PyYAML>=5.4.1
 requests
 kubernetes
 datetime
