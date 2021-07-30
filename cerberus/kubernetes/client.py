@@ -94,7 +94,8 @@ def get_all_pod_info(namespace):
     all_pod_info = runcommand.invoke(
         "kubectl get pods --chunk-size " + request_chunk_size + " -n " + namespace + " -o json", cmd_timeout
     )
-    all_pod_info = json.loads(all_pod_info)
+    if all_pod_info != "":
+        all_pod_info = json.loads(all_pod_info)
     return all_pod_info
 
 
@@ -174,39 +175,43 @@ def process_nodes(watch_nodes, iteration, iter_track_time):
 def namespace_sleep_tracker(namespace, pods_tracker):
     crashed_restarted_pods = defaultdict(list)
     all_pod_info = get_all_pod_info(namespace)
-    for pod_info in all_pod_info["items"]:
-        pod = pod_info["metadata"]["name"]
-        pod_status = pod_info["status"]
-        pod_status_phase = pod_status["phase"]
-        pod_restart_count = 0
-        if pod_status_phase != "Succeeded":
-            pod_creation_timestamp = pod_info["metadata"]["creationTimestamp"]
-            if "containerStatuses" in pod_status:
-                for container in pod_status["containerStatuses"]:
-                    pod_restart_count += container["restartCount"]
-            if "initContainerStatuses" in pod_status:
-                for container in pod_status["initContainerStatuses"]:
-                    pod_restart_count += container["restartCount"]
-            if pod in pods_tracker:
-                if (
-                    pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp
-                    or pods_tracker[pod]["restart_count"] != pod_restart_count
-                ):
-                    pod_restart_count = max(pod_restart_count, pods_tracker[pod]["restart_count"])
-                    if pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp:
-                        crashed_restarted_pods[namespace].append((pod, "crash"))
-                    if pods_tracker[pod]["restart_count"] != pod_restart_count:
-                        restarts = pod_restart_count - pods_tracker[pod]["restart_count"]
-                        crashed_restarted_pods[namespace].append((pod, "restart", restarts))
+    if all_pod_info != "" and len(all_pod_info) > 0:
+        for pod_info in all_pod_info["items"]:
+            pod = pod_info["metadata"]["name"]
+            pod_status = pod_info["status"]
+            pod_status_phase = pod_status["phase"]
+            pod_restart_count = 0
+            if pod_status_phase != "Succeeded":
+                pod_creation_timestamp = pod_info["metadata"]["creationTimestamp"]
+                if "containerStatuses" in pod_status:
+                    for container in pod_status["containerStatuses"]:
+                        pod_restart_count += container["restartCount"]
+                if "initContainerStatuses" in pod_status:
+                    for container in pod_status["initContainerStatuses"]:
+                        pod_restart_count += container["restartCount"]
+                if pod in pods_tracker:
+                    if (
+                        pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp
+                        or pods_tracker[pod]["restart_count"] != pod_restart_count
+                    ):
+                        pod_restart_count = max(pod_restart_count, pods_tracker[pod]["restart_count"])
+                        if pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp:
+                            crashed_restarted_pods[namespace].append((pod, "crash"))
+                        if pods_tracker[pod]["restart_count"] != pod_restart_count:
+                            restarts = pod_restart_count - pods_tracker[pod]["restart_count"]
+                            crashed_restarted_pods[namespace].append((pod, "restart", restarts))
+                        pods_tracker[pod] = {
+                            "creation_timestamp": pod_creation_timestamp,
+                            "restart_count": pod_restart_count,
+                        }
+                else:
+                    crashed_restarted_pods[namespace].append((pod, "crash"))
+                    if pod_restart_count != 0:
+                        crashed_restarted_pods[namespace].append((pod, "restart", pod_restart_count))
                     pods_tracker[pod] = {
                         "creation_timestamp": pod_creation_timestamp,
                         "restart_count": pod_restart_count,
                     }
-            else:
-                crashed_restarted_pods[namespace].append((pod, "crash"))
-                if pod_restart_count != 0:
-                    crashed_restarted_pods[namespace].append((pod, "restart", pod_restart_count))
-                pods_tracker[pod] = {"creation_timestamp": pod_creation_timestamp, "restart_count": pod_restart_count}
     return crashed_restarted_pods
 
 
@@ -216,26 +221,27 @@ def monitor_namespace(namespace):
     notready_pods = set()
     notready_containers = defaultdict(list)
     all_pod_info = get_all_pod_info(namespace)
-    for pod_info in all_pod_info["items"]:
-        pod = pod_info["metadata"]["name"]
-        pod_status = pod_info["status"]
-        pod_status_phase = pod_status["phase"]
-        if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
-            notready_pods.add(pod)
-        if pod_status_phase != "Succeeded":
-            if "conditions" in pod_status:
-                for condition in pod_status["conditions"]:
-                    if condition["type"] == "Ready" and condition["status"] == "False":
-                        notready_pods.add(pod)
-                    if condition["type"] == "ContainersReady" and condition["status"] == "False":
-                        if "containerStatuses" in pod_status:
-                            for container in pod_status["containerStatuses"]:
-                                if not container["ready"]:
-                                    notready_containers[pod].append(container["name"])
-                        if "initContainerStatuses" in pod_status:
-                            for container in pod_status["initContainerStatuses"]:
-                                if not container["ready"]:
-                                    notready_containers[pod].append(container["name"])
+    if all_pod_info != "" and len(all_pod_info) > 0:
+        for pod_info in all_pod_info["items"]:
+            pod = pod_info["metadata"]["name"]
+            pod_status = pod_info["status"]
+            pod_status_phase = pod_status["phase"]
+            if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
+                notready_pods.add(pod)
+            if pod_status_phase != "Succeeded":
+                if "conditions" in pod_status:
+                    for condition in pod_status["conditions"]:
+                        if condition["type"] == "Ready" and condition["status"] == "False":
+                            notready_pods.add(pod)
+                        if condition["type"] == "ContainersReady" and condition["status"] == "False":
+                            if "containerStatuses" in pod_status:
+                                for container in pod_status["containerStatuses"]:
+                                    if not container["ready"]:
+                                        notready_containers[pod].append(container["name"])
+                            if "initContainerStatuses" in pod_status:
+                                for container in pod_status["initContainerStatuses"]:
+                                    if not container["ready"]:
+                                        notready_containers[pod].append(container["name"])
     notready_pods = list(notready_pods)
     if notready_pods or notready_containers:
         status = False
