@@ -6,6 +6,7 @@ Cerberus Config Components Explained
 * [Watch Routes](#watch-routes)
 * [Watch Master Schedulable Status](#watch-master-schedulable-status)
 * [Watch Namespaces](#watch-namespaces)
+* [Watch Terminating Namespaces](#watch-terminating-namespaces)
 * [Publish Status](#publish-status)
 * [Inpsect Components](#inspect-components)
 * [Custom Checks](#custom-checks)
@@ -20,6 +21,7 @@ cerberus:
     port: 8081                                           # http server port where cerberus status is published
     watch_nodes: True                                    # Set to True for the cerberus to monitor the cluster nodes
     watch_cluster_operators: True                        # Set to True for cerberus to monitor cluster operators
+    watch_terminating_namespaces: True                   # Set to True to monitor if any namespaces (set below under 'watch_namespaces' start terminating
     watch_url_routes:
     # Route url's you want to monitor, this is a double array with the url and optional authorization parameter
     watch_master_schedulable:                            # When enabled checks for the schedulable master nodes with given label.
@@ -110,6 +112,10 @@ It supports monitoring pods in any namespaces specified in the config, the watch
 For example, `^openshift-.*$` can be used to watch all namespaces that start with `openshift-` or `openshift` can be used to watch all namespaces that have `openshift` in it.
 Or you can use `^.*$` to watch all namespaces in your cluster
 
+
+#### Watch Terminating Namespaces
+When `watch_terminating_namespaces` is set to True, this will monitor the status of all the namespaces defind under watch namespaces and report a failure if any are terminating.
+If set to False will not query or report the status of the terminating namespaces
 
 #### Publish Status
 Parameter to set if you want to publish the go/no-go signal to the http server

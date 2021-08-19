@@ -78,6 +78,33 @@ def list_namespaces():
     return namespaces
 
 
+# Monitor the status of all specified namespaces
+# and set the status to true or false
+def monitor_namespaces_status(watch_namespaces, watch_terminating_namespaces, iteration, iter_track_time):
+    namespaces = []
+    none_terminating = True
+    if watch_terminating_namespaces:
+        watch_nodes_start_time = time.time()
+        try:
+            ret = cli.list_namespace(pretty=True)
+        except ApiException as e:
+            logging.error("Exception when calling CoreV1Api->list_namespace: %s\n" % e)
+            sys.exit(1)
+        for namespace in ret.items:
+            if namespace.metadata.name in watch_namespaces:
+                if namespace.status.phase != "Active":
+                    namespaces.append(namespace.metadata.name)
+                    none_terminating = False
+        iter_track_time["watch_terminating_namespaces"] = time.time() - watch_nodes_start_time
+        logging.info("Iteration %s: No Terminating Namespaces status: %s" % (iteration, str(none_terminating)))
+    else:
+        logging.info(
+            "Cerberus is not monitoring namespaces, so setting the status "
+            "to True and assuming that the namespaces are Active"
+        )
+    return namespaces
+
+
 # Get node status
 def get_node_info(node):
     try:
