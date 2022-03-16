@@ -253,9 +253,6 @@ def main(cfg):
                             iter_track_time,
                         ),
                         functools.partial(kubecli.process_routes, watch_url_routes, iter_track_time),
-                        functools.partial(
-                            kubecli.monitor_namespaces_status, watch_namespaces, iteration, iter_track_time,
-                        ),
                     ],
                 )
 
