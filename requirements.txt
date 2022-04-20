@@ -7,3 +7,4 @@ configparser
 slackclient
 pyfiglet
 prometheus_api_client
+urllib3==1.23

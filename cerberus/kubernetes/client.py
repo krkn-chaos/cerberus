@@ -8,9 +8,8 @@ from collections import defaultdict
 from kubernetes import client, config
 import cerberus.invoke.command as runcommand
 from kubernetes.client.rest import ApiException
-from urllib3.exceptions import InsecureRequestWarning
 
-requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+requests.packages.urllib3.disable_warnings()
 
 pods_tracker = defaultdict(dict)
 
