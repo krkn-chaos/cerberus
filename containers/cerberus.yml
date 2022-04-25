@@ -18,7 +18,7 @@ spec:
         - name: cerberus
           securityContext:
             privileged: true
-          image: quay.io/openshift-scale/cerberus
+          image: quay.io/chaos-kubox/cerberus
           command: ["/bin/sh", "-c"]
           args: ["python3 start_cerberus.py -c config/config.yaml"]
           ports:
