@@ -55,17 +55,17 @@ $ cerberus_client -c <config_file_location>`
 
 Assuming docker ( 17.05 or greater with multi-build support ) is intalled on the host, run:
 ```
-$ docker pull quay.io/openshift-scale/cerberus
+$ docker pull quay.io/chaos-kubox/cerberus
 # Setup the [config](https://github.com/openshift-scale/cerberus/tree/master/config) according to your requirements. Information on the available options can be found at [usage](usage.md).
-$ docker run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config -v <path_to_cerberus_config>:/root/cerberus/config/config.yaml -d quay.io/openshift-scale/cerberus:latest
+$ docker run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config -v <path_to_cerberus_config>:/root/cerberus/config/config.yaml -d quay.io/chaos-kubox/cerberus:latest
 $ docker logs -f cerberus
 ```
 
 Similarly, podman can be used to achieve the same:
 ```
-$ podman pull quay.io/openshift-scale/cerberus
+$ podman pull quay.io/chaos-kubox/cerberus
 # Setup the [config](https://github.com/openshift-scale/cerberus/tree/master/config) according to your requirements. Information on the available options can be found at [usage](usage.md).
-$ podman run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config:Z -v <path_to_cerberus_config>:/root/cerberus/config/config.yaml:Z -d quay.io/openshift-scale/cerberus:latest
+$ podman run --name=cerberus --net=host -v <path_to_kubeconfig>:/root/.kube/config:Z -v <path_to_cerberus_config>:/root/cerberus/config/config.yaml:Z -d quay.io/chaos-kubox/cerberus:latest
 $ podman logs -f cerberus
 ```
 
