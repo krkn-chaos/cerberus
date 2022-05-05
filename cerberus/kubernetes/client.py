@@ -30,37 +30,58 @@ def initialize_clients(kubeconfig_path, chunk_size, timeout):
     kubeconfig_path_global = kubeconfig_path
 
 
+def list_continue_helper(func, *args, **keyword_args):
+    ret_overall = []
+    try:
+        ret = func(*args, **keyword_args)
+        ret_overall.append(ret)
+        continue_string = ret.metadata._continue
+
+        while continue_string:
+            ret = func(*args, **keyword_args, _continue=continue_string)
+            ret_overall.append(ret)
+            continue_string = ret.metadata._continue
+
+    except ApiException as e:
+        logging.error("Exception when calling CoreV1Api->%s: %s\n" % (str(func), e))
+
+    return ret_overall
+
+
 # List nodes in the cluster
 def list_nodes(label_selector=None):
     nodes = []
     try:
         if label_selector:
-            ret = cli.list_node(pretty=True, label_selector=label_selector, limit=request_chunk_size)
+            ret = list_continue_helper(
+                cli.list_node, pretty=True, label_selector=label_selector, limit=request_chunk_size
+            )
         else:
-            ret = cli.list_node(pretty=True, limit=request_chunk_size)
+            ret = list_continue_helper(cli.list_node, pretty=True, limit=request_chunk_size)
     except ApiException as e:
         logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
-    for node in ret.items:
-        nodes.append(node.metadata.name)
+
+    for ret_items in ret:
+        for node in ret_items.items:
+            nodes.append(node.metadata.name)
+
     return nodes
 
 
 # List all namespaces
 def list_namespaces():
     namespaces = []
-    try:
-        ret = cli.list_namespace(pretty=True, limit=request_chunk_size)
-    except ApiException as e:
-        logging.error("Exception when calling CoreV1Api->list_namespace: %s\n" % e)
-    for namespace in ret.items:
-        namespaces.append(namespace.metadata.name)
+    ret_overall = list_continue_helper(cli.list_namespace, pretty=True, limit=request_chunk_size)
+    for ret_items in ret_overall:
+        for namespace in ret_items.items:
+            namespaces.append(namespace.metadata.name)
     return namespaces
 
 
 # Get node status
 def get_node_info(node):
     try:
-        return cli.read_node_status(node, pretty=True)
+        return cli.read_node_status(node)
     except ApiException as e:
         logging.error("Exception when calling CoreV1Api->read_node_status: %s\n" % e)
 
@@ -76,7 +97,7 @@ def get_pod_status(pod, namespace):
 # Outputs a json blob with information about all the nodes
 def get_all_nodes_info():
     try:
-        return cli.list_node(limit=request_chunk_size)
+        return list_continue_helper(cli.list_node, limit=request_chunk_size)
     except ApiException as e:
         logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
 
@@ -84,7 +105,7 @@ def get_all_nodes_info():
 # Outputs a json blob with informataion about all pods in a given namespace
 def get_all_pod_info(namespace):
     try:
-        ret = cli.list_namespaced_pod(namespace, pretty=True, limit=request_chunk_size)
+        ret = list_continue_helper(cli.list_namespaced_pod, namespace, pretty=True, limit=request_chunk_size)
     except ApiException as e:
         logging.error("Exception when calling CoreV1Api->list_namespaced_pod: %s\n" % e)
 
@@ -131,19 +152,20 @@ def check_sdn_namespace():
 # Monitor the status of the cluster nodes and set the status to true or false
 def monitor_nodes():
     notready_nodes = []
-    all_nodes_info = get_all_nodes_info()
-    for node_info in all_nodes_info.items:
-        node = node_info.metadata.name
-        node_kerneldeadlock_status = "False"
-        for condition in node_info.status.conditions:
-            if condition.type == "KernelDeadlock":
-                node_kerneldeadlock_status = condition.status
-            elif condition.type == "Ready":
-                node_ready_status = condition.status
-            else:
-                continue
-        if node_kerneldeadlock_status != "False" or node_ready_status != "True":
-            notready_nodes.append(node)
+    all_nodes_info_list = get_all_nodes_info()
+    for all_nodes_info in all_nodes_info_list:
+        for node_info in all_nodes_info.items:
+            node = node_info.metadata.name
+            node_kerneldeadlock_status = "False"
+            for condition in node_info.status.conditions:
+                if condition.type == "KernelDeadlock":
+                    node_kerneldeadlock_status = condition.status
+                elif condition.type == "Ready":
+                    node_ready_status = condition.status
+                else:
+                    continue
+            if node_kerneldeadlock_status != "False" or node_ready_status != "True":
+                notready_nodes.append(node)
     status = False if notready_nodes else True
     return status, notready_nodes
 
@@ -166,46 +188,47 @@ def process_nodes(watch_nodes, iteration, iter_track_time):
 # Track the pods that were crashed/restarted during the sleep interval of an iteration
 def namespace_sleep_tracker(namespace, pods_tracker):
     crashed_restarted_pods = defaultdict(list)
-    all_pod_info = get_all_pod_info(namespace)
-    if all_pod_info is not None and all_pod_info != "":
-        for pod_info in all_pod_info.items:
-            pod = pod_info.metadata.name
-            pod_status = pod_info.status
-            pod_status_phase = pod_status.phase
-            pod_restart_count = 0
+    all_pod_info_list = get_all_pod_info(namespace)
+    if all_pod_info_list is not None and len(all_pod_info_list) > 0:
+        for all_pod_info in all_pod_info_list:
+            for pod_info in all_pod_info.items:
+                pod = pod_info.metadata.name
+                pod_status = pod_info.status
+                pod_status_phase = pod_status.phase
+                pod_restart_count = 0
 
-            if pod_status_phase != "Succeeded":
-                pod_creation_timestamp = pod_info.metadata.creation_timestamp
-                if pod_status.container_statuses is not None:
-                    for container in pod_status.container_statuses:
-                        pod_restart_count += container.restart_count
-                if pod_status.init_container_statuses is not None:
-                    for container in pod_status.init_container_statuses:
-                        pod_restart_count += container.restart_count
+                if pod_status_phase != "Succeeded":
+                    pod_creation_timestamp = pod_info.metadata.creation_timestamp
+                    if pod_status.container_statuses is not None:
+                        for container in pod_status.container_statuses:
+                            pod_restart_count += container.restart_count
+                    if pod_status.init_container_statuses is not None:
+                        for container in pod_status.init_container_statuses:
+                            pod_restart_count += container.restart_count
 
-                if pod in pods_tracker:
-                    if (
-                        pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp
-                        or pods_tracker[pod]["restart_count"] != pod_restart_count
-                    ):
-                        pod_restart_count = max(pod_restart_count, pods_tracker[pod]["restart_count"])
-                        if pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp:
-                            crashed_restarted_pods[namespace].append((pod, "crash"))
-                        if pods_tracker[pod]["restart_count"] != pod_restart_count:
-                            restarts = pod_restart_count - pods_tracker[pod]["restart_count"]
-                            crashed_restarted_pods[namespace].append((pod, "restart", restarts))
+                    if pod in pods_tracker:
+                        if (
+                            pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp
+                            or pods_tracker[pod]["restart_count"] != pod_restart_count
+                        ):
+                            pod_restart_count = max(pod_restart_count, pods_tracker[pod]["restart_count"])
+                            if pods_tracker[pod]["creation_timestamp"] != pod_creation_timestamp:
+                                crashed_restarted_pods[namespace].append((pod, "crash"))
+                            if pods_tracker[pod]["restart_count"] != pod_restart_count:
+                                restarts = pod_restart_count - pods_tracker[pod]["restart_count"]
+                                crashed_restarted_pods[namespace].append((pod, "restart", restarts))
+                            pods_tracker[pod] = {
+                                "creation_timestamp": pod_creation_timestamp,
+                                "restart_count": pod_restart_count,
+                            }
+                    else:
+                        crashed_restarted_pods[namespace].append((pod, "crash"))
+                        if pod_restart_count != 0:
+                            crashed_restarted_pods[namespace].append((pod, "restart", pod_restart_count))
                         pods_tracker[pod] = {
                             "creation_timestamp": pod_creation_timestamp,
                             "restart_count": pod_restart_count,
                         }
-                else:
-                    crashed_restarted_pods[namespace].append((pod, "crash"))
-                    if pod_restart_count != 0:
-                        crashed_restarted_pods[namespace].append((pod, "restart", pod_restart_count))
-                    pods_tracker[pod] = {
-                        "creation_timestamp": pod_creation_timestamp,
-                        "restart_count": pod_restart_count,
-                    }
     return crashed_restarted_pods
 
 
@@ -214,28 +237,29 @@ def namespace_sleep_tracker(namespace, pods_tracker):
 def monitor_namespace(namespace):
     notready_pods = set()
     notready_containers = defaultdict(list)
-    all_pod_info = get_all_pod_info(namespace)
-    if all_pod_info is not None and all_pod_info != "":
-        for pod_info in all_pod_info.items:
-            pod = pod_info.metadata.name
-            pod_status = pod_info.status
-            pod_status_phase = pod_status.phase
-            if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
-                notready_pods.add(pod)
-            if pod_status_phase != "Succeeded":
-                if pod_status.conditions is not None:
-                    for condition in pod_status.conditions:
-                        if condition.type == "Ready" and condition.status == "False":
-                            notready_pods.add(pod)
-                        if condition.type == "ContainersReady" and condition.status == "False":
-                            if pod_status.container_statuses is not None:
-                                for container in pod_status.container_statuses:
-                                    if not container.ready:
-                                        notready_containers[pod].append(container.name)
-                            if pod_status.init_container_statuses is not None:
-                                for container in pod_status.init_container_statuses:
-                                    if not container.ready:
-                                        notready_containers[pod].append(container.name)
+    all_pod_info_list = get_all_pod_info(namespace)
+    if all_pod_info_list is not None and len(all_pod_info_list) > 0:
+        for all_pod_info in all_pod_info_list:
+            for pod_info in all_pod_info.items:
+                pod = pod_info.metadata.name
+                pod_status = pod_info.status
+                pod_status_phase = pod_status.phase
+                if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
+                    notready_pods.add(pod)
+                if pod_status_phase != "Succeeded":
+                    if pod_status.conditions is not None:
+                        for condition in pod_status.conditions:
+                            if condition.type == "Ready" and condition.status == "False":
+                                notready_pods.add(pod)
+                            if condition.type == "ContainersReady" and condition.status == "False":
+                                if pod_status.container_statuses is not None:
+                                    for container in pod_status.container_statuses:
+                                        if not container.ready:
+                                            notready_containers[pod].append(container.name)
+                                if pod_status.init_container_statuses is not None:
+                                    for container in pod_status.init_container_statuses:
+                                        if not container.ready:
+                                            notready_containers[pod].append(container.name)
     notready_pods = list(notready_pods)
     if notready_pods or notready_containers:
         status = False
