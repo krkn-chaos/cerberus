@@ -93,8 +93,12 @@ def main(cfg):
         request_chunk_size = config["tunings"].get("kube_api_request_chunk_size", 250)
         daemon_mode = config["tunings"].get("daemon_mode", False)
         cores_usage_percentage = config["tunings"].get("cores_usage_percentage", 0.5)
-        database_path = config["database"].get("database_path", "/tmp/cerberus.db")
-        reuse_database = config["database"].get("reuse_database", False)
+        if "database" in config.keys():
+            database_path = config["database"].get("database_path", "/tmp/cerberus.db")
+            reuse_database = config["database"].get("reuse_database", False)
+        else:
+            database_path = "/tmp/cerberus.db"
+            reuse_database = False
         # Initialize custom checks vars
         custom_checks_status = True
         custom_checks_fail_messages = []
