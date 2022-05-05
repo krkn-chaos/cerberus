@@ -30,6 +30,25 @@ def initialize_clients(kubeconfig_path, chunk_size, timeout):
     kubeconfig_path_global = kubeconfig_path
 
 
+def list_continue_helper(func, **keyword_args):
+    ret_overall = []
+    try:
+        pretty_arg = keyword_args.get("pretty", False)
+        ret = func(pretty=pretty_arg, limit=request_chunk_size)
+        ret_overall.extend(ret.items)
+        continue_string = ret.metadata._continue
+
+        while continue_string:
+            ret = func(pretty=pretty_arg, limit=request_chunk_size, _continue=continue_string)
+            ret_overall.extend(ret.items)
+            continue_string = ret.metadata._continue
+
+    except ApiException as e:
+        logging.error("Exception when calling CoreV1Api->%s: %s\n" % (str(func), e))
+
+    return ret_overall
+
+
 # List nodes in the cluster
 def list_nodes(label_selector=None):
     nodes = []
@@ -37,7 +56,7 @@ def list_nodes(label_selector=None):
         if label_selector:
             ret = cli.list_node(pretty=True, label_selector=label_selector, limit=request_chunk_size)
         else:
-            ret = cli.list_node(pretty=True, limit=request_chunk_size)
+            ret = list_continue_helper(cli.list_node, pretty=True)
     except ApiException as e:
         logging.error("Exception when calling CoreV1Api->list_node: %s\n" % e)
     for node in ret.items:
@@ -48,11 +67,8 @@ def list_nodes(label_selector=None):
 # List all namespaces
 def list_namespaces():
     namespaces = []
-    try:
-        ret = cli.list_namespace(pretty=True, limit=request_chunk_size)
-    except ApiException as e:
-        logging.error("Exception when calling CoreV1Api->list_namespace: %s\n" % e)
-    for namespace in ret.items:
+    ret_overall = list_continue_helper(cli.list_namespace, pretty=True)
+    for namespace in ret_overall:
         namespaces.append(namespace.metadata.name)
     return namespaces
 
