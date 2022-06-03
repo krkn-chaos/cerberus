@@ -357,3 +357,29 @@ def get_csrs():
     csr_string = runcommand.invoke("oc get csr -o yaml --kubeconfig " + kubeconfig_path_global, cmd_timeout)
     csr_yaml = yaml.load(csr_string, Loader=yaml.FullLoader)
     return csr_yaml
+
+
+def get_host() -> str:
+    """Returns the Kubernetes server URL"""
+    return client.configuration.Configuration.get_default_copy().host
+
+
+def get_clusterversion_string() -> str:
+    """Returns clusterversion status text on OpenShift, empty string on other distributions"""
+    try:
+        custom_objects_api = client.CustomObjectsApi()
+        cvs = custom_objects_api.list_cluster_custom_object(
+            "config.openshift.io",
+            "v1",
+            "clusterversions",
+        )
+        for cv in cvs["items"]:
+            for condition in cv["status"]["conditions"]:
+                if condition["type"] == "Progressing":
+                    return condition["message"]
+        return ""
+    except client.exceptions.ApiException as e:
+        if e.status == 404:
+            return ""
+        else:
+            raise
