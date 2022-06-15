@@ -89,7 +89,7 @@ def main(cfg):
         prometheus_url = config["cerberus"].get("prometheus_url", "")
         prometheus_bearer_token = config["cerberus"].get("prometheus_bearer_token", "")
         custom_checks = config["cerberus"].get("custom_checks", [])
-        report_path = config["cerberus"].get("report_path", "/tmp/cerberus.report")
+        report_path = config["cerberus"].get("report_path", "cerberus.report")
         iterations = config["tunings"].get("iterations", 0)
         sleep_time = config["tunings"].get("sleep_time", 0)
         cmd_timeout = config["tunings"].get("timeout", 60)
