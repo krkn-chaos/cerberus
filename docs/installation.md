@@ -72,7 +72,7 @@ $ podman logs -f cerberus
 
 The go/no-go signal ( True or False ) gets published at http://`<hostname>`:8080. Note that the cerberus will only support ipv4 for the time being.
 
-**NOTE**: The report by default is generated at /root/cerberus/cerberus.report inside the container, it can be configured to a path with volume mounted in case we want to capture and keep it.
+**NOTE**: The report is generated at /tmp/cerberus-report.log inside the container, it can mounted to a directory on the host in case we want to capture it.
 
 If you want to build your own Cerberus image, see [here](https://github.com/cloud-bulldozer/cerberus/tree/master/containers/build_own_image-README.md).
 To run Cerberus on Power (ppc64le) architecture, build and run a containerized version by following the instructions given [here](https://github.com/cloud-bulldozer/cerberus/tree/master/containers/build_own_image-README.md).
