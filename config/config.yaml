@@ -42,6 +42,7 @@ cerberus:
     slack_team_alias:                                    # The slack team alias to be tagged while reporting failures in the slack channel when no watcher is assigned
 
     custom_checks:                                       # Relative paths of files conataining additional user defined checks
+
 tunings:
     timeout: 60                                          # Number of seconds before requests fail
     iterations: 5                                        # Iterations to loop before stopping the watch, it will be replaced with infinity when the daemon mode is enabled
