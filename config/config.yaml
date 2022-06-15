@@ -43,6 +43,8 @@ cerberus:
 
     custom_checks:                                       # Relative paths of files conataining additional user defined checks
 
+    report_path: cerberus.report                         # Path to the cerberus.report file
+
 tunings:
     timeout: 60                                          # Number of seconds before requests fail
     iterations: 5                                        # Iterations to loop before stopping the watch, it will be replaced with infinity when the daemon mode is enabled
