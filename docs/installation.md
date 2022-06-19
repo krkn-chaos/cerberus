@@ -78,3 +78,40 @@ To run Cerberus on Power (ppc64le) architecture, build and run a containerized v
 
 ## Run containerized Cerberus as a Kubernetes/OpenShift deployment
 Refer to the [instructions](https://github.com/openshift-scale/cerberus/blob/master/containers/README.md#cerberus-as-a-kubernetesopenshift-application) for information on how to run cerberus as a Kubernetes or OpenShift application.
+
+### Deploying Cerberus using a helm-chart
+
+You can find on [artifacthub.io](https://artifacthub.io/packages/search?kind=0&ts_query_web=cerberus) the 
+[chaos-cerberus](https://artifacthub.io/packages/helm/startx/chaos-cerberus) `helm-chart`
+which can be used to deploy a cerberus server.
+
+Default configuration create the following resources :
+
+  - 1 project named **chaos-cerberus**
+  - 1 scc with privileged context for **cerberus** deployment
+  - 1 configmap named **cerberus-config** with cerberus configuration
+  - 1 configmap named **cerberus-kubeconfig** with kubeconfig of the targeted cluster
+  - 2 networkpolicy to allow kraken and route to consume the signal
+  - 1 deployment named **cerberus**
+  - 1 service to the cerberus pods
+  - 1 route to the cerberus service
+
+```bash
+# Install the startx helm repository
+helm repo add startx https://startxfr.github.io/helm-repository/packages/
+# Install the cerberus project
+helm install --set project.enabled=true chaos-cerberus-project  startx/chaos-cerberus
+# Deploy the cerberus instance
+helm install \
+--set cerberus.enabled=true \
+--set cerberus.kraken_allowed=true \
+--set cerberus.kraken_ns="chaos-kraken" \
+--set cerberus.kubeconfig.token.server="https://api.mycluster:6443" \
+--set cerberus.kubeconfig.token.token="sha256~XXXXXXXXXX_PUT_YOUR_TOKEN_HERE_XXXXXXXXXXXX" \
+-n chaos-cerberus \
+chaos-cerberus-instance startx/chaos-cerberus
+```
+
+Refer to the [chaos-cerberus chart manpage](https://artifacthub.io/packages/helm/startx/chaos-cerberus)
+and especially the [cerberus configuration values](https://artifacthub.io/packages/helm/startx/chaos-cerberus#chaos-cerberus-values-dictionary) 
+for details on how to configure this chart.
