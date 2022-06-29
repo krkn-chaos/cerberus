@@ -13,8 +13,8 @@ COPY --from=origintests /usr/bin/oc /usr/bin/oc
 COPY --from=origintests /usr/bin/kubectl /usr/bin/kubectl
 
 # Install dependencies
-RUN yum install -y git python36 python3-pip gcc python3-devel && \
-git clone https://github.com/openshift-scale/cerberus /root/cerberus && \
+RUN yum install -y git python36 python3-pip gcc python3-devel zlib-devel libjpeg-devel && \
+git clone https://github.com/chaos-kubox/cerberus /root/cerberus && \
 mkdir -p /root/.kube && cd /root/cerberus && \
 pip3 install -r requirements.txt
 
