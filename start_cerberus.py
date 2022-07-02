@@ -93,8 +93,12 @@ def main(cfg):
         request_chunk_size = config["tunings"].get("kube_api_request_chunk_size", 250)
         daemon_mode = config["tunings"].get("daemon_mode", False)
         cores_usage_percentage = config["tunings"].get("cores_usage_percentage", 0.5)
-        database_path = config["database"].get("database_path", "/tmp/cerberus.db")
-        reuse_database = config["database"].get("reuse_database", False)
+        if "database" in config.keys():
+            database_path = config["database"].get("database_path", "/tmp/cerberus.db")
+            reuse_database = config["database"].get("reuse_database", False)
+        else:
+            database_path = "/tmp/cerberus.db"
+            reuse_database = False
         # Initialize custom checks vars
         custom_checks_status = True
         custom_checks_fail_messages = []
@@ -117,17 +121,12 @@ def main(cfg):
 
         # Cluster info
         logging.info("Fetching cluster info")
-        if distribution == "openshift":
-            oc_version = runcommand.optional_invoke("oc version")
-            logging.info("oc version:\n%s" % oc_version)
-
-            cluster_version = runcommand.optional_invoke("oc get clusterversion")
-            logging.info("oc get clusterversion:\n%s" % cluster_version)
-
-        cluster_info = runcommand.invoke(
-            "kubectl cluster-info | awk 'NR==1' | sed -r " "'s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g'"
-        )  # noqa
-        logging.info("%s" % (cluster_info))
+        cv = kubecli.get_clusterversion_string()
+        if cv != "":
+            logging.info(cv)
+        else:
+            logging.info("Cluster version CRD not detected, skipping")
+        logging.info("Server URL: %s" % kubecli.get_host())
 
         # Run http server using a separate thread if cerberus is asked
         # to publish the status. It is served by the http server.
@@ -171,7 +170,7 @@ def main(cfg):
                 master_nodes.extend(nodes)
 
         # Use cluster_info to get the api server url
-        api_server_url = cluster_info.split(" ")[-1].strip() + "/healthz"
+        api_server_url = kubecli.get_host() + "/healthz"
 
         # Counter for if api server is not ok
         api_fail_count = 0
@@ -226,7 +225,7 @@ def main(cfg):
                     slackcli.slack_tagging(watcher_slack_member_ID, slack_team_alias)
 
                     if iteration == 1:
-                        slackcli.slack_report_cerberus_start(cluster_info, weekday, watcher_slack_member_ID)
+                        slackcli.slack_report_cerberus_start(cv, weekday, watcher_slack_member_ID)
 
                 # Collect the initial creation_timestamp and restart_count of all the pods in all
                 # the namespaces in watch_namespaces
@@ -397,7 +396,7 @@ def main(cfg):
                 ):
                     if slack_integration:
                         slackcli.slack_logging(
-                            cluster_info,
+                            cv,
                             iteration,
                             watch_nodes_status,
                             failed_nodes,
