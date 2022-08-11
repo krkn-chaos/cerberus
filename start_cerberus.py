@@ -79,6 +79,7 @@ def main(cfg):
         watch_nodes = config["cerberus"].get("watch_nodes", False)
         watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", False)
         watch_namespaces = config["cerberus"].get("watch_namespaces", [])
+        watch_namespaces_ignore_pattern = config["cerberus"].get("watch_namespaces_ignore_pattern", [])
         watch_terminating_namespaces = config["cerberus"].get("watch_terminating_namespaces", True)
         watch_url_routes = config["cerberus"].get("watch_url_routes", [])
         watch_master_schedulable = config["cerberus"].get("watch_master_schedulable", {})
@@ -288,6 +289,7 @@ def main(cfg):
                         watch_namespaces,
                         repeat(failed_pods_components),
                         repeat(failed_pod_containers),
+                        repeat(watch_namespaces_ignore_pattern),
                     ),
                 )
 

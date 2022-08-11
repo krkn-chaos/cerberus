@@ -261,14 +261,21 @@ def namespace_sleep_tracker(namespace, pods_tracker):
 
 # Monitor the status of the pods in the specified namespace
 # and set the status to true or false
-def monitor_namespace(namespace):
+def monitor_namespace(namespace, ignore_pattern=None):
     notready_pods = set()
+    match = False
     notready_containers = defaultdict(list)
     all_pod_info_list = get_all_pod_info(namespace)
     if all_pod_info_list is not None and len(all_pod_info_list) > 0:
         for all_pod_info in all_pod_info_list:
             for pod_info in all_pod_info.items:
                 pod = pod_info.metadata.name
+                if ignore_pattern:
+                    for pattern in ignore_pattern:
+                        if re.match(pattern, pod):
+                            match = True
+                if match:
+                    continue
                 pod_status = pod_info.status
                 pod_status_phase = pod_status.phase
                 if pod_status_phase != "Running" and pod_status_phase != "Succeeded":
@@ -295,8 +302,8 @@ def monitor_namespace(namespace):
     return status, notready_pods, notready_containers
 
 
-def process_namespace(iteration, namespace, failed_pods_components, failed_pod_containers):
-    watch_component_status, failed_component_pods, failed_containers = monitor_namespace(namespace)
+def process_namespace(iteration, namespace, failed_pods_components, failed_pod_containers, ignore_pattern):
+    watch_component_status, failed_component_pods, failed_containers = monitor_namespace(namespace, ignore_pattern)
     logging.info("Iteration %s: %s: %s" % (iteration, namespace, watch_component_status))
     if not watch_component_status:
         failed_pods_components[namespace] = failed_component_pods

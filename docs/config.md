@@ -37,6 +37,7 @@ cerberus:
         -    openshift-kube-scheduler
         -    openshift-ingress
         -    openshift-sdn                                   # When enabled, it will check for the cluster sdn and monitor that namespace
+    watch_namespaces_ignore_pattern: []                  # Ignores pods matching the regex pattern in the namespaces specified under watch_namespaces
     cerberus_publish_status: True                        # When enabled, cerberus starts a light weight http server and publishes the status
     inspect_components: False                            # Enable it only when OpenShift client is supported to run
                                                          # When enabled, cerberus collects logs, events and metrics of failed components
