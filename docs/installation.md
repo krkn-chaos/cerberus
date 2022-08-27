@@ -10,8 +10,9 @@ Following ways are supported to run Cerberus:
 
 
 ## Git
+Pick the latest stable release to install [here](https://github.com/redhat-chaos/cerberus/releases/).
 ```
-$ git clone https://github.com/openshift-scale/cerberus.git
+$ git clone https://github.com/redhat-chaos/cerberus.git --branch <release>
 ```
 
 ### Install the dependencies
