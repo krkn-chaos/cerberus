@@ -179,8 +179,10 @@ def main(cfg):
 
         # Variables used for multiprocessing
         global pool
+        multiprocessing.set_start_method("fork")
         pool = multiprocessing.Pool(int(cores_usage_percentage * multiprocessing.cpu_count()), init_worker)
         manager = multiprocessing.Manager()
+        pods_tracker = manager.dict()
 
         # Track time taken for different checks in each iteration
         global time_tracker
@@ -232,8 +234,11 @@ def main(cfg):
                 # Collect the initial creation_timestamp and restart_count of all the pods in all
                 # the namespaces in watch_namespaces
                 if iteration == 1:
-                    pods_tracker = manager.dict()
-                    pool.starmap(kubecli.namespace_sleep_tracker, zip(watch_namespaces, repeat(pods_tracker)))
+
+                    pool.starmap(
+                        kubecli.namespace_sleep_tracker,
+                        zip(watch_namespaces, repeat(pods_tracker), repeat(watch_namespaces_ignore_pattern)),
+                    )
 
                 # Execute the functions to check api_server_status, master_schedulable_status,
                 # watch_nodes, watch_cluster_operators parallely
@@ -464,7 +469,8 @@ def main(cfg):
 
                 # Track pod crashes/restarts during the sleep interval in all namespaces parallely
                 multiprocessed_output = pool.starmap(
-                    kubecli.namespace_sleep_tracker, zip(watch_namespaces, repeat(pods_tracker))
+                    kubecli.namespace_sleep_tracker,
+                    zip(watch_namespaces, repeat(pods_tracker), repeat(watch_namespaces_ignore_pattern)),
                 )
 
                 crashed_restarted_pods = {}
