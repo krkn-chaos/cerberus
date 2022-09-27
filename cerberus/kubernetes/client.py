@@ -1,16 +1,15 @@
 import re
+import os
 import sys
 import yaml
 import time
 import logging
 import requests
+import urllib3
 from collections import defaultdict
 from kubernetes import client, config
 import cerberus.invoke.command as runcommand
 from kubernetes.client.rest import ApiException
-from urllib3.exceptions import InsecureRequestWarning
-
-requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 pods_tracker = defaultdict(dict)
 
@@ -20,14 +19,36 @@ kubeconfig_path_global = ""
 # Load kubeconfig and initialize kubernetes python client
 def initialize_clients(kubeconfig_path, chunk_size, timeout):
     global cli
+    global api_client
+    global client_config
     global request_chunk_size
     global cmd_timeout
     global kubeconfig_path_global
-    config.load_kube_config(kubeconfig_path)
+
+    """Initialize object and create clients from specified kubeconfig"""
+    client_config = client.Configuration()
+    http_proxy = os.getenv("http_proxy", None)
+    """Proxy has auth header"""
+    if http_proxy and "@" in http_proxy:
+        proxy_auth = http_proxy.split("@")[0].split("//")[1]
+        user_pass = proxy_auth.split(":")[0]
+        client_config.username = user_pass[0]
+        client_config.password = user_pass[1]
+    client_config.ssl_ca_cert = False
+    client_config.verify_ssl = False
+    config.load_kube_config(config_file=kubeconfig_path, persist_config=True, client_configuration=client_config)
+    proxy_url = http_proxy
+    if proxy_url:
+        client_config.proxy = proxy_url
+        if proxy_auth:
+            client_config.proxy_headers = urllib3.util.make_headers(proxy_basic_auth=proxy_auth)
+
+    client.Configuration.set_default(client_config)
     cli = client.CoreV1Api()
     cmd_timeout = timeout
     request_chunk_size = str(chunk_size)
     kubeconfig_path_global = kubeconfig_path
+    logging.info("client set")
 
 
 def list_continue_helper(func, *args, **keyword_args):
