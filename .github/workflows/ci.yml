@@ -1,22 +1,59 @@
-name: Code Quality Check
+name: Code Quality Check and CI tests
 
 on:
   - push
   - pull_request
 
+env:
+  COVERAGE_FILE: "${pwd}/.coverage"
+
 jobs:
-  lint-ci:
+  ci:
     runs-on: ubuntu-latest
-    name: Run pre-commit and install test
+    name: Run pre-commit, install test and CI tests
     steps:
       - name: Check out source repository
         uses: actions/checkout@v2
-      - name: Set up Python environment
-        uses: actions/setup-python@v1
+      - name: Install Python
+        uses: actions/setup-python@v4
         with:
-          python-version: "3.8"
+          python-version: '3.9'
+          architecture: 'x64'
       - name: Run pre-commit
         uses: pre-commit/action@v2.0.3
       - name: Install Cerberus
         run: |
           python setup.py develop
+      - name: Install environment
+        run: |
+          sudo apt-get install build-essential python3-dev
+          pip install -r requirements.txt
+      - name: Create multi-node KinD cluster
+        uses: redhat-chaos/actions/kind@main
+      # In CI we need to use daemon disabled or cerberus will never exit unless killed.
+      - name: Run funtional test basic run with daemon disabled
+        run: |
+          cp ./config/kubernetes_config.yaml ./daemon_disabled_config.yaml
+          sed -i "s/daemon_mode: True/daemon_mode: False/" ./daemon_disabled_config.yaml
+          python3 -m coverage run -a start_cerberus.py -c ./daemon_disabled_config.yaml
+      - name: Run functional test detailed data inspection with daemon disabled
+        run: |
+          cp ./daemon_disabled_config.yaml ./detailed_config.yaml
+          sed -i "s/kube-system/test-namespace/" ./detailed_config.yaml
+          sed -i "s/inspect_components: False/inspect_components: True/" ./detailed_config.yaml
+          kubectl create ns test-namespace
+          source CI/tests/common.sh
+          export -f create_and_delete_pod
+          parallel ::: "python3 start_cerberus.py -c ./detailed_config.yaml" create_and_delete_pod
+          kubectl delete ns test-namespace
+      - name: Publish coverage report to job summary
+        run: |
+          python3 -m coverage html
+          pip install html2text
+          html2text --ignore-images --ignore-links -b 0 htmlcov/index.html >> $GITHUB_STEP_SUMMARY
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: htmlcov
+          if-no-files-found: error
