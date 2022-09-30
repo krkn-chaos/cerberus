@@ -6,7 +6,7 @@ cerberus:
     watch_url_routes:                                    # Route url's you want to monitor, this is a double array with the url and optional authorization parameter
     watch_master_schedulable:                            # When enabled checks for the schedulable master nodes with given label.
         enabled: True
-        label: node-role.kubernetes.io/master
+        label: node-role.kubernetes.io/control-plane
     watch_namespaces:                                    # List of namespaces to be monitored
         -    kube-system
     watch_namespaces_ignore_pattern: []                  # Ignores pods matching the regex pattern in the namespaces specified under watch_namespaces
