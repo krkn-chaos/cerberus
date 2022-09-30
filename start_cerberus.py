@@ -74,7 +74,7 @@ def main(cfg):
         with open(cfg, "r") as f:
             config = yaml.full_load(f)
         distribution = config["cerberus"].get("distribution", "openshift").lower()
-        kubeconfig_path = config["cerberus"].get("kubeconfig_path", "")
+        kubeconfig_path = os.path.expanduser(config["cerberus"].get("kubeconfig_path", ""))
         port = config["cerberus"].get("port", 8080)
         watch_nodes = config["cerberus"].get("watch_nodes", False)
         watch_cluster_operators = config["cerberus"].get("watch_cluster_operators", False)
