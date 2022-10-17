@@ -1,0 +1,11 @@
+recursive-include ./CI *
+recursive-include ./cerberus *
+recursive-include ./config *
+recursive-include ./containers *
+recursive-include ./custom_checks *
+recursive-include ./docs *
+recursive-include ./history *
+recursive-include ./media *
+include start_cerberus.py
+include kind-config.yml
+include requirements.txt
