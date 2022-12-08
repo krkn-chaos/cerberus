@@ -16,8 +16,9 @@ def initialize_prom_client(distribution, prometheus_url, prometheus_bearer_token
         prometheus_url = "https://" + url
     if distribution == "openshift" and not prometheus_bearer_token:
         prometheus_bearer_token = runcommand.invoke(
-            "oc -n openshift-monitoring sa get-token prometheus-k8s "
-            "|| oc create token -n openshift-monitoring prometheus-k8s"
+            "oc create token -n openshift-monitoring prometheus-k8s --duration=12h "
+            "|| oc sa get-token -n openshift-monitoring prometheus-k8s || "
+            "oc sa new-token -n openshift-monitoring prometheus-k8s"
         )
     if prometheus_url and prometheus_bearer_token:
         bearer = "Bearer " + prometheus_bearer_token
