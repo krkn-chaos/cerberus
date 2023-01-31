@@ -8,3 +8,4 @@ slackclient
 pyfiglet
 prometheus_api_client
 coverage
+multidict
