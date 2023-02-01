@@ -1,5 +1,5 @@
 import os
-import slack
+import slack_sdk
 import logging
 import datetime
 import cerberus.invoke.command as runcommand
@@ -11,7 +11,7 @@ def initialize_slack_client():
         global slack_reporter_token, slack_channel_ID, slack_client
         slack_reporter_token = os.environ["SLACK_API_TOKEN"]
         slack_channel_ID = os.environ["SLACK_CHANNEL"]
-        slack_client = slack.WebClient(token=slack_reporter_token)
+        slack_client = slack_sdk.WebClient(token=slack_reporter_token)
         logging.info("Slack integration has been enabled")
         return True
     except Exception as e:
