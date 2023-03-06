@@ -8,11 +8,13 @@
 *.orig
 *.log
 *.pot
+*.out
 __pycache__/*
 .cache/*
 .*.swp
 */.ipynb_checkpoints/*
 .DS_Store
+results.markdown
 
 # Project files
 .ropeproject

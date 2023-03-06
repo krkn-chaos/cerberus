@@ -27,6 +27,7 @@ jobs:
       - name: Install environment
         run: |
           sudo apt-get install build-essential python3-dev
+          pip install --upgrade pip
           pip install -r requirements.txt
       - name: Create multi-node KinD cluster
         uses: redhat-chaos/actions/kind@main
