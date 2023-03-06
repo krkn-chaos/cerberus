@@ -320,7 +320,14 @@ def main(cfg):
                     logging.info("Iteration %s: Failed operators" % (iteration))
                     logging.info("%s\n" % (failed_operators))
                     dbcli.insert(datetime.now(), time.time(), 1, "degraded", failed_operators, "cluster operator")
-                    pool.map(inspect.inspect_operator, failed_operators)
+
+                    # Run inspection only when the inspect_components is set
+                    if inspect_components:
+                        # Collect detailed logs for all operators with degraded states parallely
+                        pool.map(inspect.inspect_operator, failed_operators)
+                        logging.info("")
+                elif distribution == "kubernetes" and inspect_components:
+                    logging.info("Skipping the failed components inspection as " "it's specific to OpenShift")
 
                 if not server_status:
                     logging.info(
