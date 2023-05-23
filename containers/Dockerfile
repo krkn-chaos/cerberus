@@ -2,9 +2,9 @@
 
 FROM quay.io/openshift/origin-tests:latest as origintests
 
-FROM quay.io/centos/centos:7
+FROM quay.io/centos/centos:stream9
 
-MAINTAINER Red Hat OpenShift Performance and Scale
+LABEL maintainer="Red Hat Chaos Engineering Team"
 
 ENV KUBECONFIG /root/.kube/config
 
