@@ -568,7 +568,7 @@ if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[logging.FileHandler(options.report, mode="w"), logging.StreamHandler()],
+        handlers=[logging.FileHandler(options.output, mode="w"), logging.StreamHandler()],
     )
     if options.cfg is None:
         logging.error("Please check if you have passed the config")
