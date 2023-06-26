@@ -39,6 +39,8 @@ When the cerberus is configured to run in the daemon mode, it will continuosly m
 #### Report
 The report is generated in the run directory and it contains the information about each check/monitored component status per iteration with timestamps. It also displays information about the components in case of failure. Refer [report](docs/example_report.md) for example.
 
+You can use the "-o <file_path_name>" option to change the location of the created report
+
 #### Metrics API
 Cerberus exposes the metrics including the failures observed during the run through an API. Tools consuming Cerberus can query the API to get a blob of json with the observed failures to scrape and act accordingly. For example, we can query for etcd failures within a start and end time and take actions to determine pass/fail for test cases or report whether the cluster is healthy or unhealthy for that duration.
 

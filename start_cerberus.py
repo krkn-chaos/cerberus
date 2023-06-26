@@ -557,11 +557,18 @@ if __name__ == "__main__":
         help="config location",
         default="config/config.yaml",
     )
+    parser.add_option(
+        "-o",
+        "--output",
+        dest="output",
+        help="output report location",
+        default="cerberus.report",
+    )
     (options, args) = parser.parse_args()
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[logging.FileHandler("cerberus.report", mode="w"), logging.StreamHandler()],
+        handlers=[logging.FileHandler(options.report, mode="w"), logging.StreamHandler()],
     )
     if options.cfg is None:
         logging.error("Please check if you have passed the config")
