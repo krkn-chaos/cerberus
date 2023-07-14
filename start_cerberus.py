@@ -29,7 +29,7 @@ def smap(f):
 
 
 def init_worker():
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 # Publish the cerberus status
@@ -515,6 +515,14 @@ def main(cfg):
                 for operation, timing in iter_track_time.items():
                     logging.info("Time taken to run %s in iteration %s: %s seconds" % (operation, iteration, timing))
                 logging.info("----------------------------------------------------------------------\n")  # noqa
+
+            except KeyboardInterrupt:
+                pool.terminate()
+                pool.join()
+                logging.info("Terminating cerberus monitoring")
+                record_time(time_tracker)
+                print_final_status_json(iteration, cerberus_status, 1)
+                sys.exit(1)
 
             except KeyboardInterrupt:
                 pool.terminate()
