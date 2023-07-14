@@ -188,7 +188,6 @@ def main(cfg):
         global time_tracker
         time_tracker = {}
 
-        global iteration
         # Initialize the start iteration to 0
         iteration = 0
 
@@ -210,7 +209,6 @@ def main(cfg):
             iterations = int(iterations)
 
         # Need to set start to cerberus_status
-        global cerberus_status
         cerberus_status = True
         # Loop to run the components status checks starts here
         while int(iteration) < iterations:
