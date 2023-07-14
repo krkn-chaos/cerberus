@@ -188,6 +188,7 @@ def main(cfg):
         global time_tracker
         time_tracker = {}
 
+        global iteration
         # Initialize the start iteration to 0
         iteration = 0
 
@@ -209,6 +210,7 @@ def main(cfg):
             iterations = int(iterations)
 
         # Need to set start to cerberus_status
+        global cerberus_status
         cerberus_status = True
         # Loop to run the components status checks starts here
         while int(iteration) < iterations:
@@ -515,14 +517,6 @@ def main(cfg):
                 for operation, timing in iter_track_time.items():
                     logging.info("Time taken to run %s in iteration %s: %s seconds" % (operation, iteration, timing))
                 logging.info("----------------------------------------------------------------------\n")  # noqa
-
-            except KeyboardInterrupt:
-                pool.terminate()
-                pool.join()
-                logging.info("Terminating cerberus monitoring")
-                record_time(time_tracker)
-                print_final_status_json(iteration, cerberus_status, 1)
-                sys.exit(1)
 
             except KeyboardInterrupt:
                 pool.terminate()
