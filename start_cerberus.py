@@ -28,8 +28,12 @@ def smap(f):
     return f()
 
 
+def handler(sig, frame):
+    raise KeyboardInterrupt("Received interrupt signal " + str(sig) + " in " + frame.f_code.co_filename)
+
+
 def init_worker():
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGINT, handler)
 
 
 # Publish the cerberus status
@@ -180,7 +184,8 @@ def main(cfg):
         # Variables used for multiprocessing
         global pool
         multiprocessing.set_start_method("fork")
-        pool = multiprocessing.Pool(int(cores_usage_percentage * multiprocessing.cpu_count()), init_worker)
+        init_worker()
+        pool = multiprocessing.Pool(int(cores_usage_percentage * multiprocessing.cpu_count()))
         manager = multiprocessing.Manager()
         pods_tracker = manager.dict()
 
@@ -517,6 +522,7 @@ def main(cfg):
                 logging.info("----------------------------------------------------------------------\n")  # noqa
 
             except KeyboardInterrupt:
+                pool.close()
                 pool.terminate()
                 pool.join()
                 logging.info("Terminating cerberus monitoring")
