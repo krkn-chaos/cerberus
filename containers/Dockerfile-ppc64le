@@ -18,7 +18,7 @@ RUN curl -L -o openshift-client-linux.tar.gz https://mirror.openshift.com/pub/op
 RUN yum install -y git python36 python3-pip gcc libffi-devel python36-devel openssl-devel gcc-c++ make && \
 pip3 install cython && \
 pip3 install numpy && \
-git clone https://github.com/redhat-chaos/cerberus.git --branch v1.0.2 /root/cerberus && \
+git clone https://github.com/redhat-chaos/cerberus.git --branch v1.0.3 /root/cerberus && \
 mkdir -p /root/.kube && cd /root/cerberus && \
 pip3 install -r requirements.txt  && \
 pip3 install setuptools==40.3.0  && \
