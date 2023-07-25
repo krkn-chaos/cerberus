@@ -30,20 +30,17 @@ def smap(f):
 
 # define Python user-defined exceptions
 class EndedByUserException(Exception):
-    "Raised when the input value is less than 18"
+    "Raised when the user ends a process"
     pass
 
 
 def handler(sig, frame):
-    logging.info("handler")
-
     raise EndedByUserException
 
 
 def init_worker():
     signal.signal(signal.SIGINT, handler)
     signal.signal(signal.SIGTERM, handler)
-    signal.signal(signal.SIGTSTP, handler)
 
 
 # Publish the cerberus status
@@ -192,7 +189,9 @@ def main(cfg):
         api_fail_count = 0
 
         # Variables used for multiprocessing
+        global pool
         multiprocessing.set_start_method("fork")
+
         pool = multiprocessing.Pool(int(cores_usage_percentage * multiprocessing.cpu_count()), init_worker)
         manager = multiprocessing.Manager()
         pods_tracker = manager.dict()
@@ -532,9 +531,10 @@ def main(cfg):
                 logging.info("----------------------------------------------------------------------\n")  # noqa
 
             except EndedByUserException:
+                pool.close()
                 pool.terminate()
                 pool.join()
-                logging.info("Terminating cerberus monitoring")
+                logging.info("Terminating cerberus monitoring by user")
                 record_time(time_tracker)
                 print_final_status_json(iteration, cerberus_status, 0)
                 sys.exit(0)
