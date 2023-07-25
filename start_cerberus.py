@@ -28,12 +28,19 @@ def smap(f):
     return f()
 
 
+# define Python user-defined exceptions
+class EndedByUserException(Exception):
+    "Raised when the user ends a process"
+    pass
+
+
 def handler(sig, frame):
-    raise KeyboardInterrupt("Received interrupt signal " + str(sig) + " in " + frame.f_code.co_filename)
+    raise EndedByUserException("End process with user kill")
 
 
 def init_worker():
     signal.signal(signal.SIGINT, handler)
+    signal.signal(signal.SIGTERM, handler)
 
 
 # Publish the cerberus status
@@ -182,10 +189,8 @@ def main(cfg):
         api_fail_count = 0
 
         # Variables used for multiprocessing
-        global pool
         multiprocessing.set_start_method("fork")
-        init_worker()
-        pool = multiprocessing.Pool(int(cores_usage_percentage * multiprocessing.cpu_count()))
+        pool = multiprocessing.Pool(int(cores_usage_percentage * multiprocessing.cpu_count()), init_worker)
         manager = multiprocessing.Manager()
         pods_tracker = manager.dict()
 
@@ -206,6 +211,7 @@ def main(cfg):
 
         # Set the number of iterations to loop to infinity if daemon mode is
         # enabled or else set it to the provided iterations count in the config
+
         if daemon_mode:
             logging.info("Daemon mode enabled, cerberus will monitor forever")
             logging.info("Ignoring the iterations set\n")
@@ -217,6 +223,7 @@ def main(cfg):
         cerberus_status = True
         # Loop to run the components status checks starts here
         while int(iteration) < iterations:
+
             try:
                 # Initialize a dict to store the operations timings per iteration
                 iter_track_time = manager.dict()
@@ -521,8 +528,15 @@ def main(cfg):
                     logging.info("Time taken to run %s in iteration %s: %s seconds" % (operation, iteration, timing))
                 logging.info("----------------------------------------------------------------------\n")  # noqa
 
+            except EndedByUserException:
+                pool.terminate()
+                pool.join()
+                logging.info("Terminating cerberus monitoring by user")
+                record_time(time_tracker)
+                print_final_status_json(iteration, cerberus_status, 0)
+                sys.exit(0)
+
             except KeyboardInterrupt:
-                pool.close()
                 pool.terminate()
                 pool.join()
                 logging.info("Terminating cerberus monitoring")
@@ -536,6 +550,7 @@ def main(cfg):
                 if cerberus_publish_status:
                     publish_cerberus_status(False)
                     cerberus_status = False
+
                 continue
 
         else:
@@ -554,6 +569,7 @@ def main(cfg):
 
 
 if __name__ == "__main__":
+    init_worker()
     # Initialize the parser to read the config
     parser = optparse.OptionParser()
     parser.add_option(
