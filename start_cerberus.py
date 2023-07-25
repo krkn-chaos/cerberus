@@ -529,16 +529,14 @@ def main(cfg):
                 logging.info("----------------------------------------------------------------------\n")  # noqa
 
             except EndedByUserException:
-                pool.close()
                 pool.terminate()
                 pool.join()
                 logging.info("Terminating cerberus monitoring by user")
                 record_time(time_tracker)
                 print_final_status_json(iteration, cerberus_status, 0)
-                break
+                sys.exit(0)
 
             except KeyboardInterrupt:
-                pool.close()
                 pool.terminate()
                 pool.join()
                 logging.info("Terminating cerberus monitoring")
@@ -553,7 +551,7 @@ def main(cfg):
                     publish_cerberus_status(False)
                     cerberus_status = False
 
-                break
+                continue
 
         else:
             logging.info("Completed watching for the specified number of iterations: %s" % (iterations))
