@@ -35,7 +35,7 @@ class EndedByUserException(Exception):
 
 
 def handler(sig, frame):
-    raise EndedByUserException
+    raise EndedByUserException("End process with user kill")
 
 
 def init_worker():
@@ -189,9 +189,7 @@ def main(cfg):
         api_fail_count = 0
 
         # Variables used for multiprocessing
-        global pool
         multiprocessing.set_start_method("fork")
-
         pool = multiprocessing.Pool(int(cores_usage_percentage * multiprocessing.cpu_count()), init_worker)
         manager = multiprocessing.Manager()
         pods_tracker = manager.dict()
@@ -537,7 +535,7 @@ def main(cfg):
                 logging.info("Terminating cerberus monitoring by user")
                 record_time(time_tracker)
                 print_final_status_json(iteration, cerberus_status, 0)
-                sys.exit(0)
+                break
 
             except KeyboardInterrupt:
                 pool.close()
