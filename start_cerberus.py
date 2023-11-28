@@ -178,7 +178,7 @@ def main(cfg):
         pool = multiprocessing.Pool(int(cores_usage_percentage * multiprocessing.cpu_count()), init_worker)
         manager = multiprocessing.Manager()
         pods_tracker = manager.dict()
-        logging.info("set up pool")
+
         # Track time taken for different checks in each iteration
         global time_tracker
         time_tracker = {}
@@ -217,7 +217,6 @@ def main(cfg):
                 iteration_start_time = time.time()
 
                 iteration += 1
-                logging.info("starting iteration top")
                 # Read the config for info when slack integration is enabled
                 if slack_integration:
                     weekday = runcommand.invoke("date '+%A'")[:-1]
@@ -271,7 +270,6 @@ def main(cfg):
                         ),
                     ],
                 )
-                logging.info("done partial")
                 # Increment api_fail_count if api server url is not ok
                 if not server_status:
                     api_fail_count += 1
@@ -294,7 +292,6 @@ def main(cfg):
                         repeat(watch_namespaces_ignore_pattern),
                     ),
                 )
-                logging.info("after partial 2")
 
                 watch_namespaces_status = False if failed_pods_components else True
                 iter_track_time["watch_namespaces"] = time.time() - watch_namespaces_start_time
