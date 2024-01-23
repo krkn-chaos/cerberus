@@ -15,15 +15,15 @@ jobs:
     - name: Check out code
       uses: actions/checkout@master
     - name: Build the Docker images
-      run: docker build --no-cache -t quay.io/redhat-chaos/cerberus containers/
+      run: docker build --no-cache -t quay.io/krkn-chaos/cerberus containers/
     - name: Push the Docker images
-      run: docker push quay.io/redhat-chaos/cerberus
+      run: docker push quay.io/krkn-chaos/cerberus
     - name: Remove Image
-      run: docker rmi -f quay.io/redhat-chaos/cerberus | exit 0
+      run: docker rmi -f quay.io/krkn-chaos/cerberus | exit 0
     - name: Build Kraken-hub Image
       uses: convictional/trigger-workflow-and-wait@v1.5.0
       with:
-        owner: redhat-chaos
+        owner: krkn-chaos
         repo: krkn-hub
         github_token: ${{ secrets.G_ACCESS_TOKEN }}
         workflow_file_name: docker-image.yml
