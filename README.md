@@ -5,6 +5,8 @@ Guardian of Kubernetes and OpenShift Clusters
 
 Cerberus watches the Kubernetes/OpenShift clusters for dead nodes, system component failures/health and exposes a go or no-go signal which can be consumed by other workload generators or applications in the cluster and act accordingly.
 
+You can find more information about cerberus, how to run and config options in https://krkn-chaos.dev/docs/cerberus/
+
 ### Workflow
 ![Cerberus workflow](media/cerberus-workflow.png)
 
