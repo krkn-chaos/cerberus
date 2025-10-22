@@ -19,14 +19,8 @@ jobs:
         with:
           python-version: '3.9'
           architecture: 'x64'
-      - name: Run pre-commit
-        uses: pre-commit/action@v2.0.3
-      - name: Install Cerberus
-        run: |
-          python setup.py develop
       - name: Install environment
         run: |
-          sudo apt-get install build-essential python3-dev
           pip install --upgrade pip
           pip install -r requirements.txt
       - name: Create multi-node KinD cluster
