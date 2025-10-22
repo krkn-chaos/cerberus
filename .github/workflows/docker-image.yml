@@ -20,12 +20,10 @@ jobs:
       run: docker push quay.io/krkn-chaos/cerberus
     - name: Remove Image
       run: docker rmi -f quay.io/krkn-chaos/cerberus | exit 0
-    - name: Build Kraken-hub Image
-      uses: convictional/trigger-workflow-and-wait@v1.5.0
+    - name: Rebuild krkn-hub
+      if: startsWith(github.ref, 'refs/tags')
+      uses: redhat-chaos/actions/krkn-hub@main
       with:
-        owner: krkn-chaos
-        repo: krkn-hub
-        github_token: ${{ secrets.G_ACCESS_TOKEN }}
-        workflow_file_name: docker-image.yml
-        trigger_workflow: true
-        wait_workflow: true
+        QUAY_USER: ${{ secrets.QUAY_USERNAME }}
+        QUAY_TOKEN: ${{ secrets.QUAY_PASSWORD }}
+        AUTOPUSH: ${{ secrets.AUTOPUSH }}
