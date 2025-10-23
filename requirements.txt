@@ -9,3 +9,5 @@ slack_sdk
 pyfiglet
 prometheus_api_client
 coverage
+urllib3[socks]
+requests[socks]
