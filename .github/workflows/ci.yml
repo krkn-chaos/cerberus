@@ -13,7 +13,7 @@ jobs:
     name: Run pre-commit, install test and CI tests
     steps:
       - name: Check out source repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install Python
         uses: actions/setup-python@v4
         with:
