@@ -99,6 +99,7 @@ def main(cfg):
         slack_integration = config["cerberus"].get("slack_integration", False)
         prometheus_url = config["cerberus"].get("prometheus_url", "")
         prometheus_bearer_token = config["cerberus"].get("prometheus_bearer_token", "")
+        prometheus_alerts = config["cerberus"].get("prometheus_alerts", [])
         custom_checks = config["cerberus"].get("custom_checks", [])
         iterations = config["tunings"].get("iterations", 0)
         sleep_time = config["tunings"].get("sleep_time", 0)
@@ -203,11 +204,6 @@ def main(cfg):
 
         # Initialize the prometheus client
         promcli.initialize_prom_client(distribution, prometheus_url, prometheus_bearer_token)
-
-        # Prometheus query to alert on high apiserver latencies
-        apiserver_latency_query = r"""ALERTS{alertname="KubeAPILatencyHigh", severity="warning"}"""
-        # Prometheus query to alert when etcd fync duration is high
-        etcd_leader_changes_query = r"""ALERTS{alertname="etcdHighNumberOfLeaderChanges", severity="warning"}"""  # noqa
 
         # Set the number of iterations to loop to infinity if daemon mode is
         # enabled or else set it to the provided iterations count in the config
@@ -460,26 +456,22 @@ def main(cfg):
                 elif distribution == "kubernetes" and inspect_components:
                     logging.info("Skipping the failed components inspection as " "it's specific to OpenShift")
 
-                # Alert on high latencies
-                metrics = promcli.process_prom_query(apiserver_latency_query)
-                if metrics:
-                    logging.warning(
-                        "Kubernetes API server latency is high. "
-                        "More than 99th percentile latency for given requests to the "
-                        "kube-apiserver is above 1 second.\n"
-                    )
-                    logging.info("%s\n" % (metrics))
-
-                # Alert on high etcd fync duration
-                metrics = promcli.process_prom_query(etcd_leader_changes_query)
-                if metrics:
-                    logging.warning(
-                        "Observed increase in number of etcd leader elections over the last "
-                        "15 minutes. Frequent elections may be a sign of insufficient resources, "
-                        "high network latency, or disruptions by other components and should be "
-                        "investigated.\n"
-                    )
-                logging.info("%s\n" % (metrics))
+                # Check configured prometheus alerts
+                if promcli.prom_cli:
+                    for alert in prometheus_alerts:
+                        try:
+                            query = alert["expr"]
+                            description = alert.get("description", query)
+                            severity = alert.get("severity", "warning")
+                        except (TypeError, KeyError) as e:
+                            logging.warning("Skipping malformed prometheus alert entry: %s\n" % e)
+                            continue
+                        metrics = promcli.process_prom_query(query)
+                        if metrics:
+                            logging.warning("[%s] %s\n" % (severity, description))
+                            logging.info("%s\n" % (metrics))
+                            names = [m["metric"].get("pod", m["metric"].get("instance", query)) for m in metrics]
+                            dbcli.insert(datetime.now(), time.time(), 1, description, names, "prometheus alert")
 
                 # Sleep for the specified duration
                 logging.info("Sleeping for the specified duration: %s\n" % (sleep_time))
