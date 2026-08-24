@@ -13,7 +13,7 @@ COPY --from=origintests /usr/bin/oc /usr/bin/oc
 COPY --from=origintests /usr/bin/kubectl /usr/bin/kubectl
 
 # Install dependencies
-RUN yum install -y git python39 python3-pip gcc python3-devel zlib-devel libjpeg-devel
+RUN yum install -y git python3.11 python3-pip gcc python3-devel zlib-devel libjpeg-devel
 
 RUN git clone https://github.com/krkn-chaos/cerberus.git --branch v1.0.4 /root/cerberus && \
 mkdir -p /root/.kube && cd /root/cerberus && pip3 install --upgrade pip && pip3 install -r requirements.txt
