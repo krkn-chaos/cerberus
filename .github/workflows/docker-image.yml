@@ -13,7 +13,7 @@ jobs:
         QUAY_USER: ${{ secrets.QUAY_USERNAME }}
         QUAY_TOKEN: ${{ secrets.QUAY_PASSWORD }}
     - name: Check out code
-      uses: actions/checkout@master
+      uses: actions/checkout@61b9e3751b92087fd0b06925ba6dd6314e06f089 # master
     - name: Build the Docker images
       run: docker build --no-cache -t quay.io/krkn-chaos/cerberus containers/
     - name: Push the Docker images
@@ -22,7 +22,7 @@ jobs:
       run: docker rmi -f quay.io/krkn-chaos/cerberus | exit 0
     - name: Rebuild krkn-hub
       if: startsWith(github.ref, 'refs/tags')
-      uses: redhat-chaos/actions/krkn-hub@main
+      uses: redhat-chaos/actions/krkn-hub@b3118123a105aa4d208b282639d24f71d02fb25c # main
       with:
         QUAY_USER: ${{ secrets.QUAY_USERNAME }}
         QUAY_TOKEN: ${{ secrets.QUAY_PASSWORD }}

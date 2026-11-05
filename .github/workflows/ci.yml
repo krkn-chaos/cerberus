@@ -13,9 +13,9 @@ jobs:
     name: Run pre-commit, install test and CI tests
     steps:
       - name: Check out source repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@0717577d45739eb3c851188b29f50ed6c0b2194e # v2
       - name: Install Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
         with:
           python-version: '3.9'
           architecture: 'x64'
@@ -24,7 +24,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
       - name: Create multi-node KinD cluster
-        uses: redhat-chaos/actions/kind@main
+        uses: redhat-chaos/actions/kind@b3118123a105aa4d208b282639d24f71d02fb25c # main
       # In CI we need to use daemon disabled or cerberus will never exit unless killed.
       - name: Run funtional test basic run with daemon disabled
         run: |
@@ -48,7 +48,7 @@ jobs:
           pip install html2text
           html2text --ignore-images --ignore-links -b 0 htmlcov/index.html >> $GITHUB_STEP_SUMMARY
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: coverage
           path: htmlcov
