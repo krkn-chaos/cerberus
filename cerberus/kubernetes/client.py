@@ -412,7 +412,7 @@ def process_master_taint(master_nodes, master_label, iteration, iter_track_time)
 # See if url is available
 def is_url_available(url, header=None):
     try:
-        response = requests.get(url, headers=header, verify=False)
+        response = requests.get(url, headers=header, verify=False, timeout=30)
         if response.status_code != 200:
             return False
         else:
