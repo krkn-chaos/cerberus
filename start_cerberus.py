@@ -261,7 +261,7 @@ def main(cfg):
                 ) = pool.map(
                     smap,
                     [
-                        functools.partial(kubecli.is_url_available, api_server_url),
+                        functools.partial(kubecli.is_url_available, api_server_url, timeout=None),
                         functools.partial(
                             kubecli.process_master_taint, master_nodes, master_label, iteration, iter_track_time
                         ),
